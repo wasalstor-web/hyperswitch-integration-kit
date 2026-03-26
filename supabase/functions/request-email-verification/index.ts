@@ -1,7 +1,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { randomTokenHex, sha256Hex } from "../_shared/hash.ts";
-import { sendViaGateway } from "../_shared/gateway.ts";
+import { outboxStatusFromGateway, sendViaGateway } from "../_shared/gateway.ts";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -79,20 +79,35 @@ Deno.serve(async (req) => {
     template: "email_verification",
     data: { verifyLink, expires },
   });
-  const gwOk = gw.ok;
+  const outboxStatus = outboxStatusFromGateway(gw);
   await supabase.from("message_outbox").insert({
     channel: "email",
     recipient: email,
     template_key: "email_verification",
     payload: { verifyLink, expires },
-    status: gwOk ? "sent" : "failed",
-    provider_status: gw.status,
+    status: outboxStatus,
+    provider_status: gw.httpStatus ?? null,
+    provider_body: {
+      ...(gw.providerBody && typeof gw.providerBody === "object" && gw.providerBody !== null
+        ? (gw.providerBody as Record<string, unknown>)
+        : {}),
+      ...(gw.error ? { gateway_error: gw.error } : {}),
+    },
   });
+
+  const gatewayHint =
+    outboxStatus === "skipped"
+      ? " (لم يُرسل بريد: اضبط MESSAGE_GATEWAY_URL أو استخدم dev_token إن وُجد)"
+      : outboxStatus === "failed"
+        ? " (فشل الإرسال عبر البوابة — راجع message_outbox وإعدادات البوابة)"
+        : "";
 
   return new Response(
     JSON.stringify({
       ok: true,
-      message: "If the email exists in our system, a verification link was sent.",
+      gateway: outboxStatus,
+      message:
+        "If the email exists in our system, a verification link was sent." + gatewayHint,
       dev_token: Deno.env.get("DANGEROUS_RETURN_TOKEN") === "true" ? rawToken : undefined,
     }),
     { status: 200, headers: { ...cors, "Content-Type": "application/json" } },

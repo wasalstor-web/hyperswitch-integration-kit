@@ -1,7 +1,4 @@
-/** إرسال عبر بوابتكم؛ لاحقاً استبدلوا الجسم حسب عقد API المزوّد */
-
 export type GatewaySendResult = {
-  /** skipped = لا يوجد MESSAGE_GATEWAY_URL؛ sent = HTTP ناجح؛ failed = خطأ شبكة أو HTTP غير ناجح */
   outcome: "skipped" | "sent" | "failed";
   httpStatus?: number;
   error?: string;
@@ -10,24 +7,16 @@ export type GatewaySendResult = {
 
 const DEFAULT_TIMEOUT_MS = 15_000;
 
-/**
- * يستدعي البوابة بـ POST JSON. مهلة افتراضية 15s (MESSAGE_GATEWAY_TIMEOUT_MS).
- * لا يُعاد sent عند غياب URL — يُعاد skipped.
- */
-export async function sendViaGateway(
-  body: Record<string, unknown>,
-): Promise<GatewaySendResult> {
-  const url = Deno.env.get("MESSAGE_GATEWAY_URL")?.trim();
+export async function sendViaGateway(body: Record<string, unknown>): Promise<GatewaySendResult> {
+  const url = process.env.MESSAGE_GATEWAY_URL?.trim();
   if (!url) {
     console.warn("MESSAGE_GATEWAY_URL missing; message not sent to external gateway");
     return { outcome: "skipped", error: "MESSAGE_GATEWAY_URL not set" };
   }
 
-  const key = Deno.env.get("MESSAGE_GATEWAY_KEY") ?? "";
-  const timeoutMs = Math.min(
-    Math.max(Number(Deno.env.get("MESSAGE_GATEWAY_TIMEOUT_MS") || DEFAULT_TIMEOUT_MS) || DEFAULT_TIMEOUT_MS, 1000),
-    120_000,
-  );
+  const key = process.env.MESSAGE_GATEWAY_KEY ?? "";
+  const raw = Number(process.env.MESSAGE_GATEWAY_TIMEOUT_MS);
+  const timeoutMs = Math.min(Math.max(raw || DEFAULT_TIMEOUT_MS, 1000), 120_000);
 
   try {
     const controller = new AbortController();
@@ -72,7 +61,6 @@ export async function sendViaGateway(
   }
 }
 
-/** حالة صف message_outbox من نتيجة البوابة */
 export function outboxStatusFromGateway(gw: GatewaySendResult): "skipped" | "sent" | "failed" {
   return gw.outcome;
 }

@@ -1,4 +1,6 @@
 const cfg = () => ({
+  apiBase: (import.meta.env.VITE_API_BASE_URL || "").replace(/\/$/, ""),
+  apiKey: (import.meta.env.VITE_INTERNAL_API_KEY || "").trim(),
   url: (import.meta.env.VITE_SUPABASE_URL || "").replace(/\/$/, ""),
   anon: (import.meta.env.VITE_SUPABASE_ANON_KEY || "").trim(),
 });
@@ -38,22 +40,41 @@ function setSessionEmail(e) {
 }
 
 async function invokeFn(name, body) {
-  const { url, anon } = cfg();
-  if (!url || !anon) {
-    throw new Error("أنشئ web/.env.local وضع VITE_SUPABASE_URL و VITE_SUPABASE_ANON_KEY");
+  const { apiBase, apiKey, url, anon } = cfg();
+  if (!apiBase && (!url || !anon)) {
+    throw new Error(
+      "أنشئ web/.env.local: إما VITE_API_BASE_URL (خادم محلي + Prisma) أو VITE_SUPABASE_URL + VITE_SUPABASE_ANON_KEY — انظر web/.env.example",
+    );
   }
   let res;
   try {
-    res = await fetch(`${url}/functions/v1/${name}`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${anon}`,
-        apikey: anon,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(body),
-    });
+    if (apiBase) {
+      const headers = { "Content-Type": "application/json" };
+      if (apiKey) {
+        headers.Authorization = `Bearer ${apiKey}`;
+      }
+      res = await fetch(`${apiBase}/functions/v1/${name}`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify(body),
+      });
+    } else {
+      res = await fetch(`${url}/functions/v1/${name}`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${anon}`,
+          apikey: anon,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(body),
+      });
+    }
   } catch {
+    if (apiBase) {
+      throw new Error(
+        "تعذّر الاتصال بالخادم المحلي. من جذر المشروع شغّل: npm run server:dev (وتأكد من DATABASE_URL و docker compose إن لزم).",
+      );
+    }
     throw new Error(
       `تعذّر الاتصال بـ Supabase.\nهل المشروع «متوقف»؟ ${linkDashboardHome(url)}\nثم نفّذ من الجهاز: .\\scripts\\deploy-supabase.ps1`,
     );
@@ -86,15 +107,15 @@ const STEP_LABELS = [
 
 function renderSteps(current) {
   stepsEl.innerHTML = STEP_LABELS.map((l, i) => {
-    const on = i <= current ? "on" : "";
-    return `<span class="${on}">${i + 1}. ${l}</span>`;
+    const active = i <= current ? " step-pill--active" : "";
+    return `<span class="step-pill${active}">${i + 1}. ${l}</span>`;
   }).join("");
 }
 
 function panel(id, title, inner) {
   return `
     <div class="card hidden" data-panel="${id}">
-      <h2 style="font-size:1rem;margin:0 0 1rem;font-weight:600">${title}</h2>
+      <h2 class="card-title">${title}</h2>
       ${inner}
     </div>
   `;
@@ -133,7 +154,7 @@ function initPanels() {
       "confirm",
       "الخطوة 2 — تأكيد البريد",
       `
-      <p class="sub" style="margin:0 0 1rem">إن وصلك رابط، افتحه من البريد (نفس هذا الموقع مع <code>email</code> و <code>token</code>).</p>
+      <p class="hint">إن وصلك رابط، افتحه من البريد (نفس هذا الموقع مع <code>email</code> و <code>token</code>).</p>
       <label for="tok">رمز التحقق (للتطوير إن ظهر في الاستجابة)</label>
       <input type="text" id="tok" autocomplete="one-time-code" placeholder="الصق التوكن هنا" />
       <button type="button" id="btn-confirm">تأكيد البريد</button>
@@ -176,7 +197,7 @@ function initPanels() {
       "done",
       "تم",
       `
-      <p id="done-text" class="sub" style="margin:0;color:var(--ok)"></p>
+      <p id="done-text" class="done-text"></p>
       <button type="button" class="secondary" id="btn-reset">بدء جلسة جديدة</button>
     `,
     );
@@ -324,17 +345,26 @@ async function tryAutoConfirmFromUrl() {
 const alertsEl = document.getElementById("alerts");
 
 function alertCard(className, title, bodyHtml) {
-  return `<div class="card ${className}"><strong>${title}</strong><div style="margin-top:0.5rem">${bodyHtml}</div></div>`;
+  const variant = className === "errline" ? "notice-danger" : "notice-warning";
+  return `<div class="notice ${variant}"><strong>${escapeHtml(title)}</strong><div>${bodyHtml}</div></div>`;
 }
 
-async function pingSupabase() {
-  const { url, anon } = cfg();
-  if (!url || !anon) return { ok: false, skipped: true };
+async function pingBackend() {
+  const { apiBase, url, anon } = cfg();
+  if (apiBase) {
+    try {
+      const res = await fetch(`${apiBase}/health`, { method: "GET" });
+      return { ok: res.ok, status: res.status, mode: "api" };
+    } catch {
+      return { ok: false, status: 0, mode: "api" };
+    }
+  }
+  if (!url || !anon) return { ok: false, skipped: true, mode: "none" };
   try {
     const res = await fetch(`${url}/auth/v1/health`, { method: "GET" });
-    return { ok: res.ok, status: res.status };
+    return { ok: res.ok, status: res.status, mode: "supabase" };
   } catch {
-    return { ok: false, status: 0 };
+    return { ok: false, status: 0, mode: "supabase" };
   }
 }
 
@@ -343,38 +373,46 @@ initPanels();
 showPanel("email");
 
 (async () => {
-  const { url, anon } = cfg();
-  if (!url) {
+  const { apiBase, url, anon } = cfg();
+  if (!apiBase && !url) {
     alertsEl.innerHTML = alertCard(
       "errline",
       "تنبيه إعداد:",
-      `ضع <code>VITE_SUPABASE_URL</code> في <code>web/.env.local</code> (انسخ من <code>.env.example</code>) ثم أعد تشغيل <code>npm run dev</code>.`,
+      `ضع <code>VITE_API_BASE_URL</code> (خادم محلي) أو <code>VITE_SUPABASE_URL</code> في <code>web/.env.local</code> — انسخ من <code>web/.env.example</code> ثم أعد تشغيل <code>npm run dev</code>.`,
     );
     return;
   }
-  if (!anon) {
+  if (!apiBase && !anon) {
     alertsEl.innerHTML = alertCard(
       "errline",
       "تنبيه إعداد:",
-      `ضع <code>VITE_SUPABASE_ANON_KEY</code> (مفتاح anon) في <code>web/.env.local</code>. المصدر: ${linkDashboardApi(url)} → <em>anon public</em>. ثم أعد تشغيل السيرفر.`,
+      `مع Supabase ضع <code>VITE_SUPABASE_ANON_KEY</code> في <code>web/.env.local</code>. المصدر: ${linkDashboardApi(url)} → <em>anon public</em>.`,
     );
     return;
   }
 
-  const ping = await pingSupabase();
+  const ping = await pingBackend();
   if (!ping.ok && !ping.skipped) {
     const st = ping.status;
-    let hint =
-      st === 503
-        ? "الخدمة تردّ 503 — المشروع غالباً <strong>متوقف (Paused)</strong>. من اللوحة اضغط <strong>Restore project</strong> وانتظر حتى يصبح نشطاً."
-        : st === 402
-          ? "رمز 402 — قيود فوترة أو استخدام على المؤسسة؛ راجع الفوترة في Supabase."
-          : `الاستجابة ${st || "خطأ شبكة"} — تحقق من المشروع ومن نشر الدوال (<code>deploy-supabase.ps1</code>).`;
-    alertsEl.innerHTML = alertCard(
-      "warn",
-      "Supabase غير جاهز:",
-      `${hint}<br /><br />${linkDashboardHome(url)} · ${linkDashboardApi(url)}`,
-    );
+    if (ping.mode === "api") {
+      const hint =
+        st === 0
+          ? "لا يوجد رد — من جذر المشروع: <code>docker compose -f docker-compose.dev.yml up -d</code> ثم <code>npm run db:deploy</code> ثم <code>npm run server:dev</code> مع <code>DATABASE_URL</code> في <code>.env</code>."
+          : `الاستجابة ${st} — راجع سجلات الخادم ومتغيرات <code>.env</code>.`;
+      alertsEl.innerHTML = alertCard("warn", "الخادم المحلي غير جاهز:", hint);
+    } else {
+      let hint =
+        st === 503
+          ? "الخدمة تردّ 503 — المشروع غالباً <strong>متوقف (Paused)</strong>. من اللوحة اضغط <strong>Restore project</strong> وانتظر حتى يصبح نشطاً."
+          : st === 402
+            ? "رمز 402 — قيود فوترة أو استخدام على المؤسسة؛ راجع الفوترة في Supabase."
+            : `الاستجابة ${st || "خطأ شبكة"} — تحقق من المشروع ومن نشر الدوال (<code>deploy-supabase.ps1</code>).`;
+      alertsEl.innerHTML = alertCard(
+        "warn",
+        "Supabase غير جاهز:",
+        `${hint}<br /><br />${linkDashboardHome(url)} · ${linkDashboardApi(url)}`,
+      );
+    }
   }
 
   tryAutoConfirmFromUrl();

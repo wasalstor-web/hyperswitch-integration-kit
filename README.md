@@ -1,10 +1,28 @@
 # Hyperswitch + Supabase — بريد ثم OTP
 
-**دليل الإكمال والنشر بالعربية:** [docs/complete-runbook-ar.md](docs/complete-runbook-ar.md)
+**دليل الإكمال والنشر بالعربية:** [docs/complete-runbook-ar.md](docs/complete-runbook-ar.md)  
+**ترتيب النشر (سحابي ↔ سيرفر):** [docs/DEPLOY_ORDER_AR.md](docs/DEPLOY_ORDER_AR.md)  
+**فهرس الوثائق:** [docs/README.md](docs/README.md)  
+**هيكل المجلدات (مرجع):** [docs/PROJECT_STRUCTURE_AR.md](docs/PROJECT_STRUCTURE_AR.md)  
+**الالتزام بالواجهات مفتوحة المصدر (عقود API + محاذاة Hyperswitch):** [docs/OPEN_SOURCE_INTERFACES_AR.md](docs/OPEN_SOURCE_INTERFACES_AR.md)  
+**إشعارات تراخيص npm:** [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) — حدّثها بـ `npm run licenses:notices`
+
+## هيكل المشروع (مختصر)
+
+| المسار | الدور |
+|--------|--------|
+| `docs/` | كل الأدلة العربية + [فهرس](docs/README.md) |
+| `prisma/` | **PostgreSQL مباشر** — `schema.prisma` + هجرات (`npm run db:migrate`) — انظر [prisma/README.md](prisma/README.md) |
+| `supabase/` | مسار **Supabase**: migrations + Edge Functions |
+| `web/` | واجهة Vite |
+| `scripts/` | سكربتات PowerShell للنشر والتحقق |
+| `deploy/hostinger/` | Docker للواجهة فقط |
 
 ## ما الذي أُنجز
 
-1. **مخطط قاعدة بيانات** (`supabase/migrations/…sql`): جداول `onboarding_sessions` و `message_outbox` مع RLS يمنع الوصول المباشر من المتصفح.
+1. **مخطط قاعدة بيانات** — مساران متوازيان:
+   - **Supabase:** `supabase/migrations/…sql` مع RLS يمنع الوصول المباشر من المتصفح.
+   - **Postgres + Prisma:** `prisma/schema.prisma` + `prisma/migrations/` للوصول المباشر عبر `DATABASE_URL` (DBeaver / `psql` / تطبيق خلفي).
 2. **خمس Edge Functions (Deno)**:
    - `request-email-verification` — رابط تحقق عبر **بوابة الرسائل** (`MESSAGE_GATEWAY_URL`) أو تسجيل في `message_outbox`.
    - `confirm-email` — تأكيد البريد.
@@ -13,7 +31,7 @@
    - `register-hyperswitch-merchant` — بعد الخطوة السابقة: إنشاء مستخدم/تاجر في **Hyperswitch** وحفظ `hyperswitch_merchant_id` (وضع `public_signup` أو `admin_merchant`). التفاصيل: [docs/GATEWAY_HYPERSWITCH_AR.md](docs/GATEWAY_HYPERSWITCH_AR.md).
 3. **بوابة الرسائل**: `MESSAGE_GATEWAY_URL` / `MESSAGE_GATEWAY_KEY` — عقد JSON في [docs/GATEWAY_HYPERSWITCH_AR.md](docs/GATEWAY_HYPERSWITCH_AR.md).
 4. **Hyperswitch محلياً**: ملف `docker-compose.mailpit.yml` + تعديل SMTP إلى `mailpit` + تفعيل `email=true` في لوحة التحكم لرسائل النظام داخل Hyperswitch (إن دعمتها الصورة).
-5. **واجهة ويب جاهزة** (`web/`): تمرّ بكل الخطوات حتى ربط Hyperswitch.
+5. **واجهة ويب جاهزة** (`web/`): تمرّ بكل الخطوات حتى ربط Hyperswitch؛ **الهوية البصرية موحّدة** مع بوابة التجار (خط Tajawal، ألوان فيروزية، شعار `public/logo-mobassat.svg`).
 6. **بوابة وهمية للتطوير** (`tools/mock-message-gateway.mjs`): تطبع رسائل JSON بدل إرسال بريد حقيقي.
 
 ## النشر المستقل (حزمة نظيفة)
@@ -26,7 +44,31 @@
 4. راجع **الترخيص:** [LICENSE](LICENSE) (MIT).
 5. محلياً: `.\scripts\verify-publish-ready.ps1` (أو `-ArabicUI` للرسائل العربية).
 
-## واجهة الويب (تدفق كامل)
+## التشغيل الكامل محلياً (Prisma + خادم API + الواجهة)
+
+```powershell
+cd path\to\hyperswitch-integration-kit
+docker compose -f docker-compose.dev.yml up -d
+copy .env.example .env
+# عدّل DATABASE_URL مثلاً: postgresql://app:app@127.0.0.1:5433/onboarding
+npm install
+npm run db:deploy
+npm run server:dev
+```
+
+في طرفية أخرى:
+
+```powershell
+cd path\to\hyperswitch-integration-kit\web
+copy .env.example .env.local
+# فعّل السطر: VITE_API_BASE_URL=http://localhost:8788
+npm install
+npm run dev
+```
+
+التفاصيل: [server/README.md](server/README.md)
+
+## واجهة الويب (تدفق كامل — Supabase)
 
 ```powershell
 cd path\to\hyperswitch-integration-kit\web
@@ -65,7 +107,8 @@ node tools/mock-message-gateway.mjs
 | `.\scripts\build-and-package-static.ps1` | `npm run build` ثم أرشيف `onboardingspa_*.zip` للرفع إلى استضافة مشتركة؛ يختار تلقائياً `D:\` أو `E:\` إذا كان قرص المشروع ضيقاً (`-OutputDir` لتثبيت المسار). |
 | `.\scripts\complete-setup.ps1` | بناء الويب + تجميع الدوال للذاتي؛ نشر سحابي عند وجود الرمز. `-SkipPreflight` اختياري. |
 | `.\scripts\deploy-supabase.ps1` | ربط المشروع و`db push` و`functions deploy`. مرجع المشروع: `SUPABASE_PROJECT_REF` أو ملف **`.supabase-project-ref`** (انسخ من `.supabase-project-ref.example`). |
-| `.\scripts\verify-publish-ready.ps1` | قبل الرفع أو الأرشفة: يتحقق من `.gitignore` و`LICENSE` و`package-lock` وعدم تتبع ملفات أسرار في git، ثم يبني الواجهة بقيم `VITE_*` قالبية ويفحص `dist`. خيارات: `-SkipBuild`، `-ScanDistOnly`، `-ArabicUI`. |
+| `.\scripts\verify-publish-ready.ps1` | قبل الرفع أو الأرشفة: يتحقق من `.gitignore` و`LICENSE` و`THIRD_PARTY_NOTICES.md` و`docs/OPEN_SOURCE_INTERFACES_AR.md` و`package-lock` (الجذر + `web/`) وعدم تتبع أسرار في git، ثم يبني الواجهة بقيم `VITE_*` قالبية ويفحص `dist`. خيارات: `-SkipBuild`، `-ScanDistOnly`، `-ArabicUI`. |
+| `npm run licenses:notices` | يحدّث [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) من ملفات القفل — نفّذه بعد `npm install` الذي يغيّر الاعتماديات. |
 
 **CI:** عند رفع المستودع إلى GitHub، سير **`web-ci.yml`** يشغّل نفس الفحوصات ثم يبني الواجهة بمتغيرات قالبية ويرفع **`dist`** كـ artifact باسم `onboarding-spa-dist`.
 
@@ -73,10 +116,10 @@ node tools/mock-message-gateway.mjs
 
 | الخطوة | الإجراء |
 |--------|---------|
-| قاعدة البيانات | تنفيذ `supabase/migrations/20250326120000_email_then_otp.sql` (سحابي أو ذاتي) |
-| الدوال | `.\scripts\deploy-supabase.ps1` أو نسخ `build/selfhosted-edge-functions` بعد `package-for-selfhosted.ps1` |
-| الأسرار | `PUBLIC_APP_VERIFY_URL`، اختياري `MESSAGE_GATEWAY_*`، `HYPERSWITCH_*`، تطوير `DANGEROUS_*` |
-| الواجهة | `web/.env.local` + `npm run dev` |
+| قاعدة البيانات | **Supabase:** تنفيذ `supabase/migrations/*.sql` — **أو Postgres:** `npm run db:deploy` بعد ضبط `DATABASE_URL` في `.env` |
+| الدوال / API | **Supabase:** `.\scripts\deploy-supabase.ps1` أو `build/selfhosted-edge-functions` — **أو محلي:** `npm run server:dev` + [server/README.md](server/README.md) |
+| الأسرار | `PUBLIC_APP_VERIFY_URL` (جذر `.env` للخادم أو أسرار Supabase)، اختياري `MESSAGE_GATEWAY_*`، `HYPERSWITCH_*`، `INTERNAL_API_KEY`، تطوير `DANGEROUS_*` |
+| الواجهة | `web/.env.local` (`VITE_API_BASE_URL` أو `VITE_SUPABASE_*`) + `npm run dev` |
 | Hyperswitch | تشغيل الـ Router وضبط `HYPERSWITCH_BASE_URL` (من الدوال إلى الحاوية/النطاق) |
 
 ما لا يمكن تنفيذه من هنا تلقائياً: ربط مشروع Supabase السحابي (إن كان متوقفاً أو بدون رمز وصول)، وDNS/HTTPS على الإنتاج.

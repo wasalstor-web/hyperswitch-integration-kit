@@ -1,4 +1,4 @@
-﻿#Requires -Version 5.1
+#Requires -Version 5.1
 <#
   فحوصات قبل النشر المستقل: تجاهل الأسرار، ترخيص، عدم تتبع ملفات حساسة، وبناء اختياري بقيم قالبية.
 
@@ -73,11 +73,31 @@ if (-not (Test-Path (Join-Path $Root "LICENSE"))) {
 if ($ArabicUI) { Write-Host "  LICENSE: موجود." -ForegroundColor Green }
 else { Write-Host "  LICENSE: present." -ForegroundColor Green }
 
+$notices = Join-Path $Root "THIRD_PARTY_NOTICES.md"
+if (-not (Test-Path $notices)) {
+  throw (T "THIRD_PARTY_NOTICES.md مفقود. نفّذ: npm run licenses:notices" "THIRD_PARTY_NOTICES.md missing. Run: npm run licenses:notices")
+}
+if ((Get-Item $notices).Length -lt 200) {
+  throw (T "THIRD_PARTY_NOTICES.md يبدو فارغاً جداً." "THIRD_PARTY_NOTICES.md seems too small.")
+}
+if ($ArabicUI) { Write-Host "  THIRD_PARTY_NOTICES: موجود." -ForegroundColor Green }
+else { Write-Host "  THIRD_PARTY_NOTICES: present." -ForegroundColor Green }
+
+$ifaceDoc = Join-Path $Root "docs\OPEN_SOURCE_INTERFACES_AR.md"
+if (-not (Test-Path $ifaceDoc)) {
+  throw (T "docs/OPEN_SOURCE_INTERFACES_AR.md مفقود." "docs/OPEN_SOURCE_INTERFACES_AR.md missing.")
+}
+if ($ArabicUI) { Write-Host "  OPEN_SOURCE_INTERFACES_AR: موجود." -ForegroundColor Green }
+else { Write-Host "  OPEN_SOURCE_INTERFACES_AR: present." -ForegroundColor Green }
+
 if (-not (Test-Path (Join-Path $Root "web\package-lock.json"))) {
   throw (T "web/package-lock.json مفقود (مطلوب لـ npm ci في CI)." "web/package-lock.json missing (needed for npm ci).")
 }
-if ($ArabicUI) { Write-Host "  package-lock.json: موجود." -ForegroundColor Green }
-else { Write-Host "  package-lock.json: present." -ForegroundColor Green }
+if (-not (Test-Path (Join-Path $Root "package-lock.json"))) {
+  throw (T "package-lock.json في الجذر مفقود (مطلوب لـ Prisma/الجذر)." "Root package-lock.json missing (needed for root npm ci / Prisma).")
+}
+if ($ArabicUI) { Write-Host "  package-lock: الجذر + web موجود." -ForegroundColor Green }
+else { Write-Host "  package-lock: root + web present." -ForegroundColor Green }
 
 $gitDir = Join-Path $Root ".git"
 if (Test-Path $gitDir) {

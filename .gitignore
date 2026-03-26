@@ -5,6 +5,8 @@
 !.env.example
 
 build/
+.data/
+node_modules/
 supabase/.temp/
 web/node_modules/
 web/dist/

@@ -3,174 +3,365 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>تسجيل — بريد، OTP، Hyperswitch</title>
+    <meta name="description" content="مبسط — تأكيد البريد وOTP وربط بوابة الدفع (Hyperswitch)" />
+    <meta name="theme-color" content="#0d9488" />
+    <link rel="icon" type="image/svg+xml" href="/logo-mobassat.svg" />
+    <title>مبسط — تأكيد البريد وربط الدفع</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;600;700&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;600;700;800&display=swap"
       rel="stylesheet"
     />
     <style>
+      /* هوية موحّدة مع بوابة التجار (merchant-portal) */
       :root {
-        --bg: #0f1419;
-        --card: #1a222c;
-        --text: #e7ecf1;
-        --muted: #8b9aab;
-        --accent: #3d8bfd;
-        --ok: #34c759;
-        --err: #ff453a;
-        --warn: #ffb020;
-        --border: #2a3544;
+        --color-primary: #0d9488;
+        --color-primary-hover: #0f766e;
+        --color-primary-light: #ccfbf1;
+        --color-primary-border: #5eead4;
+        --color-surface: #ffffff;
+        --color-bg: #f0fdfa;
+        --color-bg-alt: #ecfeff;
+        --color-text: #0f172a;
+        --color-text-muted: #475569;
+        --color-border: #99f6e4;
+        --color-border-muted: #94a3b8;
+        --color-success: #15803d;
+        --color-success-bg: #f0fdf4;
+        --color-danger: #b91c1c;
+        --color-danger-bg: #fef2f2;
+        --color-warning: #b45309;
+        --color-warning-bg: #fffbeb;
+        --radius: 0.5rem;
+        --radius-lg: 0.75rem;
+        --shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+        --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.07), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
       }
+
       * {
         box-sizing: border-box;
       }
+
       body {
         margin: 0;
         min-height: 100vh;
-        font-family: "IBM Plex Sans Arabic", system-ui, sans-serif;
-        background: radial-gradient(1200px 600px at 80% -10%, #1a2a44 0%, var(--bg) 55%);
-        color: var(--text);
-        line-height: 1.5;
+        font-family: "Tajawal", "Segoe UI", Tahoma, sans-serif;
+        background: linear-gradient(180deg, var(--color-bg) 0%, var(--color-bg-alt) 100%);
+        color: var(--color-text);
+        line-height: 1.55;
       }
-      .wrap {
-        max-width: 440px;
+
+      .layout {
+        width: min(520px, 100%);
         margin: 0 auto;
-        padding: 2rem 1.25rem 4rem;
+        padding: 1.25rem 1.25rem 2.5rem;
       }
-      h1 {
-        font-size: 1.35rem;
-        font-weight: 700;
+
+      .brand-header {
+        text-align: center;
+        padding: 0.5rem 0 1.25rem;
+      }
+
+      .brand-header img {
+        height: 44px;
+        width: auto;
+        display: inline-block;
+      }
+
+      .brand-tagline {
+        display: block;
+        margin-top: 0.35rem;
+        font-size: 0.72rem;
+        font-weight: 600;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: var(--color-text-muted);
+      }
+
+      .page-title {
         margin: 0 0 0.35rem;
+        font-size: clamp(1.35rem, 4vw, 1.65rem);
+        font-weight: 800;
+        text-align: center;
+        background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-hover) 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
       }
-      .sub {
-        color: var(--muted);
-        font-size: 0.9rem;
-        margin-bottom: 1.75rem;
+
+      .page-sub {
+        text-align: center;
+        color: var(--color-text-muted);
+        font-size: 0.92rem;
+        margin: 0 0 1.25rem;
       }
+
+      .flow-hint {
+        text-align: center;
+        font-size: 0.8rem;
+        color: var(--color-text-muted);
+        margin: 0 0 1rem;
+      }
+
       .steps {
         display: flex;
-        gap: 0.35rem;
+        gap: 0.4rem;
         flex-wrap: wrap;
-        margin-bottom: 1.5rem;
+        justify-content: center;
+        margin-bottom: 1.25rem;
       }
-      .steps span {
+
+      .step-pill {
         font-size: 0.72rem;
-        padding: 0.2rem 0.5rem;
-        border-radius: 999px;
-        background: var(--card);
-        border: 1px solid var(--border);
-        color: var(--muted);
+        font-weight: 500;
+        padding: 0.35rem 0.65rem;
+        border-radius: 9999px;
+        border: 1px solid var(--color-border-muted);
+        color: var(--color-text-muted);
+        background: var(--color-surface);
+        box-shadow: var(--shadow);
       }
-      .steps span.on {
-        color: var(--text);
-        border-color: var(--accent);
-        background: rgba(61, 139, 253, 0.12);
+
+      .step-pill--active {
+        background: var(--color-primary-light);
+        color: var(--color-primary-hover);
+        border-color: var(--color-primary-border);
+        font-weight: 700;
       }
+
       .card {
-        background: var(--card);
-        border: 1px solid var(--border);
-        border-radius: 14px;
-        padding: 1.25rem 1.35rem;
+        background: var(--color-surface);
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius-lg);
+        padding: 1.25rem 1.4rem;
         margin-bottom: 1rem;
+        box-shadow: var(--shadow-md);
       }
+
+      .card-title {
+        font-size: 1rem;
+        font-weight: 700;
+        margin: 0 0 1rem;
+        color: var(--color-primary);
+        padding-bottom: 0.45rem;
+        border-bottom: 2px solid var(--color-primary-border);
+      }
+
       label {
         display: block;
-        font-size: 0.82rem;
-        color: var(--muted);
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: var(--color-text);
         margin-bottom: 0.35rem;
       }
+
+      .hint {
+        font-size: 0.82rem;
+        color: var(--color-text-muted);
+        margin: 0 0 1rem;
+        line-height: 1.5;
+      }
+
       input {
         width: 100%;
         padding: 0.65rem 0.75rem;
-        border-radius: 8px;
-        border: 1px solid var(--border);
-        background: #121820;
-        color: var(--text);
+        border-radius: var(--radius);
+        border: 1px solid var(--color-border-muted);
+        background: var(--color-surface);
+        color: var(--color-text);
         font: inherit;
         margin-bottom: 0.85rem;
+        transition: border-color 0.15s ease, box-shadow 0.15s ease;
       }
+
       input:focus {
         outline: none;
-        border-color: var(--accent);
+        border-color: var(--color-primary);
+        box-shadow: 0 0 0 3px var(--color-primary-light);
       }
+
+      input::placeholder {
+        color: var(--color-text-muted);
+        opacity: 0.75;
+      }
+
       button {
         width: 100%;
-        padding: 0.7rem 1rem;
+        padding: 0.75rem 1rem;
         border: none;
-        border-radius: 8px;
-        background: var(--accent);
-        color: #fff;
+        border-radius: var(--radius);
+        background: var(--color-primary);
+        color: var(--color-surface);
         font: inherit;
-        font-weight: 600;
+        font-weight: 700;
+        font-size: 0.95rem;
+        letter-spacing: 0.02em;
         cursor: pointer;
+        transition: background 0.2s ease;
       }
+
+      button:hover:not(:disabled) {
+        background: var(--color-primary-hover);
+      }
+
       button:disabled {
-        opacity: 0.45;
+        opacity: 0.55;
         cursor: not-allowed;
       }
+
       button.secondary {
         background: transparent;
-        border: 1px solid var(--border);
-        color: var(--text);
+        border: 1px solid var(--color-border-muted);
+        color: var(--color-text-muted);
+        font-weight: 600;
         margin-top: 0.5rem;
       }
+
+      button.secondary:hover:not(:disabled) {
+        color: var(--color-text);
+        border-color: var(--color-text-muted);
+        background: var(--color-bg);
+      }
+
       .msg {
-        font-size: 0.85rem;
-        padding: 0.65rem 0.75rem;
-        border-radius: 8px;
+        font-size: 0.88rem;
+        padding: 0.75rem 0.85rem;
+        border-radius: var(--radius);
         margin-top: 0.75rem;
         white-space: pre-wrap;
+        line-height: 1.5;
       }
+
       .msg.ok {
-        background: rgba(52, 199, 89, 0.12);
-        color: #8ee99f;
+        background: var(--color-success-bg);
+        color: var(--color-success);
+        border: 1px solid #bbf7d0;
       }
+
       .msg.err {
-        background: rgba(255, 69, 58, 0.12);
-        color: #ff8a80;
+        background: var(--color-danger-bg);
+        color: var(--color-danger);
+        border: 1px solid #fecaca;
       }
+
       .hidden {
         display: none !important;
       }
-      .card.errline {
-        border-color: var(--err);
+
+      .notice {
+        border-radius: var(--radius);
+        padding: 0.9rem 1rem;
+        font-size: 0.9rem;
+        line-height: 1.55;
+        margin-bottom: 1rem;
+        box-shadow: var(--shadow);
       }
-      .card.errline strong {
-        color: #ff8a80;
+
+      .notice strong {
+        display: block;
+        margin-bottom: 0.35rem;
+        font-weight: 700;
       }
-      .card.warn {
-        border-color: var(--warn);
+
+      .notice-danger {
+        background: var(--color-danger-bg);
+        border: 1px solid #fecaca;
+        color: var(--color-danger);
       }
-      .card.warn strong {
-        color: var(--warn);
+
+      .notice-warning {
+        background: var(--color-warning-bg);
+        border: 1px solid #fde68a;
+        color: var(--color-warning);
       }
-      #alerts .card {
-        font-size: 0.88rem;
+
+      .notice a {
+        color: var(--color-primary);
+        font-weight: 600;
       }
-      #alerts a {
-        color: var(--accent);
+
+      .notice a:hover {
+        text-decoration: underline;
       }
+
+      .dev-hint {
+        margin-top: 1.75rem;
+        border-radius: var(--radius-lg);
+        border: 1px dashed var(--color-primary-border);
+        background: var(--color-surface);
+        overflow: hidden;
+      }
+
+      .dev-hint summary {
+        cursor: pointer;
+        padding: 0.65rem 1rem;
+        font-size: 0.82rem;
+        font-weight: 600;
+        color: var(--color-primary-hover);
+        list-style: none;
+      }
+
+      .dev-hint summary::-webkit-details-marker {
+        display: none;
+      }
+
+      .dev-hint[open] summary {
+        border-bottom: 1px solid var(--color-border);
+      }
+
+      .dev-hint .dev-hint-body {
+        padding: 0.75rem 1rem 1rem;
+        font-size: 0.8rem;
+        color: var(--color-text-muted);
+        line-height: 1.6;
+      }
+
       code {
         font-size: 0.78rem;
-        background: #121820;
-        padding: 0.15rem 0.35rem;
-        border-radius: 4px;
+        background: var(--color-primary-light);
+        padding: 0.15rem 0.4rem;
+        border-radius: 0.25rem;
+        color: var(--color-text);
+      }
+
+      .done-text {
+        margin: 0;
+        color: var(--color-success);
+        font-weight: 600;
       }
     </style>
   </head>
   <body>
-    <div class="wrap">
-      <h1>إكمال التسجيل</h1>
-      <p class="sub">بريد → تأكيد → OTP → ربط Hyperswitch</p>
+    <div class="layout">
+      <header class="brand-header">
+        <img src="/logo-mobassat.svg" width="160" height="44" alt="مبسط" />
+        <span class="brand-tagline">بوابة تسجيل التجار</span>
+      </header>
+
+      <h1 class="page-title">تأكيد البريد وربط الدفع</h1>
+      <p class="page-sub">بريد إلكتروني ← تأكيد ← رمز OTP ← Hyperswitch</p>
+
+      <p class="flow-hint">اتبع الخطوات بالترتيب. يمكن إكمال التحقق من نفس هذه الصفحة.</p>
+
       <div class="steps" id="steps"></div>
       <div id="alerts"></div>
       <div id="panels"></div>
-      <p class="sub" style="margin-top: 2rem">
-        اضبط <code>.env.local</code> ثم <code>npm run dev</code> — واجعل
-        <code>PUBLIC_APP_VERIFY_URL</code> في أسرار الدوال يشير إلى هذا العنوان (مثلاً
-        <code>http://localhost:5173</code>).
-      </p>
+
+      <details class="dev-hint">
+        <summary>إعداد المطوّر (محلي أو Supabase)</summary>
+        <div class="dev-hint-body">
+          <p style="margin: 0 0 0.5rem">
+            <strong>محلي + Prisma:</strong> من جذر المشروع <code>npm run server:dev</code>، وفي <code>.env</code>
+            ضع <code>DATABASE_URL</code> و<code>PUBLIC_APP_VERIFY_URL=http://localhost:5173</code>، وفي
+            <code>web/.env.local</code> ضع <code>VITE_API_BASE_URL=http://localhost:8788</code>.
+          </p>
+          <p style="margin: 0">
+            <strong>Supabase:</strong> <code>VITE_SUPABASE_URL</code> و<code>VITE_SUPABASE_ANON_KEY</code>، وأسرار الدوال
+            <code>PUBLIC_APP_VERIFY_URL</code>.
+          </p>
+        </div>
+      </details>
     </div>
     <script type="module" src="/src/main.js"></script>
   </body>

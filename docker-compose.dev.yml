@@ -1,0 +1,24 @@
+# تشغيل محلي: Postgres للتطوير مع Prisma
+# من جذر المشروع: docker compose -f docker-compose.dev.yml up -d
+# ثم: npm run db:deploy   (مع DATABASE_URL في .env)
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: hs_kit_pg_dev
+    environment:
+      POSTGRES_USER: app
+      POSTGRES_PASSWORD: app
+      POSTGRES_DB: onboarding
+    ports:
+      - "5433:5432"
+    volumes:
+      - hs_kit_pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U app -d onboarding"]
+      interval: 3s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  hs_kit_pg_data:

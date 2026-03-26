@@ -1,0 +1,35 @@
+{
+  "name": "hyperswitch-integration-kit",
+  "private": true,
+  "license": "MIT",
+  "version": "1.0.0",
+  "description": "تدفق بريد + OTP + تسجيل تاجر Hyperswitch — Edge Functions وواجهة ويب وطبقة Postgres عبر Prisma",
+  "scripts": {
+    "db:generate": "prisma generate",
+    "db:migrate": "prisma migrate dev",
+    "db:deploy": "prisma migrate deploy",
+    "db:push": "prisma db push",
+    "db:studio": "prisma studio",
+    "db:validate": "prisma validate",
+    "server:dev": "tsx watch server/src/index.ts",
+    "server:start": "tsx server/src/index.ts",
+    "server:typecheck": "tsc -p server/tsconfig.json",
+    "licenses:notices": "node scripts/generate-third-party-notices.mjs",
+    "web:dev": "npm run dev --prefix web",
+    "web:build": "npm run build --prefix web"
+  },
+  "dependencies": {
+    "@electric-sql/pglite": "^0.4.2",
+    "@hono/node-server": "^1.19.0",
+    "@prisma/client": "^6.19.0",
+    "dotenv": "^16.6.1",
+    "hono": "^4.11.1",
+    "pglite-prisma-adapter": "^0.6.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.19.0",
+    "prisma": "^6.19.0",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3"
+  }
+}

@@ -1,4 +1,4 @@
-﻿#Requires -Version 5.1
+#Requires -Version 5.1
 <#
   ينشر الـ migration والدوال إلى مشروع Supabase السحابي.
   مطلوب: رمز وصول من https://supabase.com/dashboard/account/tokens
@@ -21,11 +21,17 @@ if (-not $env:SUPABASE_ACCESS_TOKEN -and (Test-Path $tokenFile)) {
 }
 
 if (-not $env:SUPABASE_ACCESS_TOKEN) {
-  Write-Host "مطلوب رمز وصول. أحد الخيارين:" -ForegroundColor Red
-  Write-Host "  1) أنشئ ملفاً باسم .supabase-access-token في جذر المشروع والصق فيه الرمز فقط (سطر واحد)" -ForegroundColor Yellow
-  Write-Host "  2) أو: `$env:SUPABASE_ACCESS_TOKEN = 'sbp_...'" -ForegroundColor Yellow
-  Write-Host "  الرمز من: https://supabase.com/dashboard/account/tokens" -ForegroundColor Yellow
-  exit 1
+  Write-Host "التحقق من جلسة CLI (بعد npx supabase login)..." -ForegroundColor DarkGray
+  npx --yes supabase projects list 2>$null | Out-Null
+  if ($LASTEXITCODE -ne 0) {
+    Write-Host "مطلوب رمز وصول. أحد الخيارات:" -ForegroundColor Red
+    Write-Host "  1) ملف .supabase-access-token في جذر المشروع (سطر واحد = الرمز)" -ForegroundColor Yellow
+    Write-Host "  2) `$env:SUPABASE_ACCESS_TOKEN = 'sbp_...'" -ForegroundColor Yellow
+    Write-Host "  3) مرة واحدة: npx supabase login --token 'sbp_...'" -ForegroundColor Yellow
+    Write-Host "  الرمز من: https://supabase.com/dashboard/account/tokens" -ForegroundColor Yellow
+    exit 1
+  }
+  Write-Host "استخدام تسجيل الدخول المحفوظ في Supabase CLI." -ForegroundColor Cyan
 }
 
 $refFile = Join-Path $Root ".supabase-project-ref"

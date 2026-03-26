@@ -1,0 +1,55 @@
+// يطابق منطق supabase/migrations/*.sql — لاستخدام Postgres مباشرة (Neon / RDS / Docker)
+// التطبيع: خزّن البريد دائماً lowercase من طبقة التطبيق
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum MessageChannel {
+  email
+  sms
+}
+
+enum OutboxStatus {
+  queued
+  sent
+  failed
+  skipped
+}
+
+model OnboardingSession {
+  id                    String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  email                 String    @unique
+  emailVerified         Boolean   @default(false) @map("email_verified")
+  emailTokenHash        String?   @map("email_token_hash")
+  emailTokenExpiresAt   DateTime? @map("email_token_expires_at") @db.Timestamptz(6)
+  otpCodeHash           String?   @map("otp_code_hash")
+  otpExpiresAt          DateTime? @map("otp_expires_at") @db.Timestamptz(6)
+  otpAttempts           Int       @default(0) @map("otp_attempts") @db.SmallInt
+  completedAt           DateTime? @map("completed_at") @db.Timestamptz(6)
+  hyperswitchMerchantId String?   @map("hyperswitch_merchant_id")
+  createdAt             DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt             DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@map("onboarding_sessions")
+}
+
+model MessageOutbox {
+  id             String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  channel        MessageChannel
+  recipient      String
+  templateKey    String         @map("template_key")
+  payload        Json           @default("{}")
+  status         OutboxStatus   @default(queued)
+  providerStatus Int?           @map("provider_status")
+  providerBody   Json?          @map("provider_body")
+  createdAt      DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@index([status, createdAt(sort: Desc)], map: "message_outbox_status_idx")
+  @@map("message_outbox")
+}

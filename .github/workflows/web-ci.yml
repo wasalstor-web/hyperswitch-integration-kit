@@ -4,19 +4,29 @@ on:
   push:
     paths:
       - "web/**"
+      - "prisma/**"
+      - "package.json"
+      - "package-lock.json"
       - "scripts/**"
       - ".github/workflows/**"
       - ".gitignore"
       - "LICENSE"
       - "supabase/migrations/**"
+      - "server/**"
+      - "docker-compose.dev.yml"
   pull_request:
     paths:
       - "web/**"
+      - "prisma/**"
+      - "package.json"
+      - "package-lock.json"
       - "scripts/**"
       - ".github/workflows/**"
       - ".gitignore"
       - "LICENSE"
       - "supabase/migrations/**"
+      - "server/**"
+      - "docker-compose.dev.yml"
 
 jobs:
   build:
@@ -24,15 +34,28 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Publish readiness (no build)
-        shell: pwsh
-        run: ./scripts/verify-publish-ready.ps1 -SkipBuild
-
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
           cache: npm
-          cache-dependency-path: web/package-lock.json
+          cache-dependency-path: |
+            package-lock.json
+            web/package-lock.json
+
+      - name: Install root (Prisma)
+        run: npm ci
+
+      - name: Prisma schema validate
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/postgres
+        run: npx prisma validate
+
+      - name: Server TypeScript check
+        run: npx tsc -p server/tsconfig.json
+
+      - name: Publish readiness (no build)
+        shell: pwsh
+        run: ./scripts/verify-publish-ready.ps1 -SkipBuild
 
       - name: Install and build SPA
         working-directory: web

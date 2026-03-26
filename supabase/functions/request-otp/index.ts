@@ -1,7 +1,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { randomOtp6, sha256Hex } from "../_shared/hash.ts";
-import { sendViaGateway } from "../_shared/gateway.ts";
+import { outboxStatusFromGateway, sendViaGateway } from "../_shared/gateway.ts";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -59,7 +59,7 @@ Deno.serve(async (req) => {
   const otpHash = await sha256Hex(otp);
   const otpExpires = new Date(Date.now() + 10 * 60 * 1000).toISOString();
 
-  await supabase
+  const { error: otpUpdErr } = await supabase
     .from("onboarding_sessions")
     .update({
       otp_code_hash: otpHash,
@@ -69,26 +69,49 @@ Deno.serve(async (req) => {
     })
     .eq("email", email);
 
+  if (otpUpdErr) {
+    console.error(otpUpdErr);
+    return new Response(JSON.stringify({ error: "Failed to store OTP" }), {
+      status: 500,
+      headers: { ...cors, "Content-Type": "application/json" },
+    });
+  }
+
   const gw = await sendViaGateway({
     channel: "email",
     to: email,
     template: "otp",
     data: { code: otp, expires: otpExpires },
   });
+  const outboxStatus = outboxStatusFromGateway(gw);
 
   await supabase.from("message_outbox").insert({
     channel: "email",
     recipient: email,
     template_key: "otp",
     payload: { expires: otpExpires },
-    status: gw.ok ? "sent" : "failed",
-    provider_status: gw.status,
+    status: outboxStatus,
+    provider_status: gw.httpStatus ?? null,
+    provider_body: {
+      ...(gw.providerBody && typeof gw.providerBody === "object" && gw.providerBody !== null
+        ? (gw.providerBody as Record<string, unknown>)
+        : {}),
+      ...(gw.error ? { gateway_error: gw.error } : {}),
+    },
   });
+
+  const gatewayHint =
+    outboxStatus === "skipped"
+      ? " (لم يُرسل OTP: اضبط MESSAGE_GATEWAY_URL أو DANGEROUS_RETURN_OTP)"
+      : outboxStatus === "failed"
+        ? " (فشل الإرسال عبر البوابة)"
+        : "";
 
   return new Response(
     JSON.stringify({
       ok: true,
-      message: "OTP sent (dev: set DANGEROUS_RETURN_OTP=true to include code)",
+      gateway: outboxStatus,
+      message: "OTP sent (dev: set DANGEROUS_RETURN_OTP=true to include code)" + gatewayHint,
       dev_otp: Deno.env.get("DANGEROUS_RETURN_OTP") === "true" ? otp : undefined,
     }),
     { status: 200, headers: { ...cors, "Content-Type": "application/json" } },
