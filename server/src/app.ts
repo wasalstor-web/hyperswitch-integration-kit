@@ -5,6 +5,7 @@ import type { InputJsonValue } from "@prisma/client/runtime/library";
 import { honoCorsOrigin, jsonResponse } from "./cors.js";
 import { outboxStatusFromGateway, sendViaGateway } from "./gateway.js";
 import { randomOtp6, randomTokenHex, sha256Hex } from "./hash.js";
+import { probeEdfapaySale, readEdfapayConfig } from "./edfapay.js";
 import {
   probePaymentGatewayToken,
   readPaymentGatewayOAuthConfig,
@@ -334,6 +335,52 @@ export function createApp(prisma: PrismaClient) {
       message:
         "OTP OK. Next: create Supabase Auth session from your backend or call Hyperswitch APIs with server-side keys.",
     });
+  });
+
+  app.post("/functions/v1/edfapay-probe", async (c) => {
+    if (process.env.EDFAPAY_PROBE_ENABLED !== "true") {
+      return jsonResponse(
+        c,
+        {
+          error:
+            "معطّل. للتجربة: EDFAPAY_PROBE_ENABLED=true — انظر docs/EDFAPAY_MUBASAT_AR.md",
+        },
+        403,
+      );
+    }
+    const cfg = readEdfapayConfig();
+    if (!cfg) {
+      return jsonResponse(c, {
+        ok: false,
+        configured: false,
+        message:
+          "أضِف EDFAPAY_CLIENT_KEY و EDFAPAY_HASH_PASSWORD (أو PAYMENT_GATEWAY_CLIENT_ID و PAYMENT_GATEWAY_CLIENT_SECRET). رمز التاجر اختياري: EDFAPAY_MERCHANT_CODE أو EDFAPAY_MERCHANT_PROFILE.",
+      });
+    }
+    try {
+      const r = await probeEdfapaySale(cfg);
+      const result = r.parsed && typeof r.parsed.result === "string" ? r.parsed.result : null;
+      const status = r.parsed && typeof r.parsed.status === "string" ? r.parsed.status : null;
+      return jsonResponse(c, {
+        ok: r.ok,
+        configured: true,
+        base_url: cfg.baseUrl,
+        http_status: r.httpStatus,
+        edfapay_result: result,
+        edfapay_status: status,
+        merchant_id_in_response:
+          r.parsed && typeof r.parsed.merchant_id === "string" ? r.parsed.merchant_id : null,
+        merchant_profile_env_set: Boolean(cfg.merchantProfile),
+        merchant_code_env_set: Boolean(cfg.merchantCode),
+        hint: r.ok
+          ? "SALE تجريبي مقبول من EdfaPay. عطّل EDFAPAY_PROBE_ENABLED بعد التجربة."
+          : "تحقق: السر يجب أن يكون Merchant Password للتجزئة (ليس OAuth). جرّب EDFAPAY_USE_SANDBOX=false للإنتاج أو العكس. راجع body_preview.",
+        body_preview: r.bodyPreview,
+      });
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      return jsonResponse(c, { ok: false, error: msg }, 502);
+    }
   });
 
   app.get("/functions/v1/payment-gateway-probe", async (c) => {
