@@ -1,0 +1,37 @@
+# Hyperswitch onboarding SPA — Hostinger VPS + Traefik (isolated stack).
+# Does NOT run Supabase or Hyperswitch here; point VITE_* at your existing services.
+#
+# From this directory:
+#   cp .env.example .env
+#   nano .env
+#   docker compose --env-file .env up -d --build
+#
+# Isolation: dedicated bridge network + unique COMPOSE_PROJECT_NAME (no shared network with WordPress/n8n/BookCars).
+
+networks:
+  hs_onboard_isolated:
+    driver: bridge
+
+services:
+  onboarding-web:
+    build:
+      context: ../..
+      dockerfile: deploy/hostinger/docker/web.Dockerfile
+      args:
+        VITE_SUPABASE_URL: ${VITE_SUPABASE_URL}
+        VITE_SUPABASE_ANON_KEY: ${VITE_SUPABASE_ANON_KEY}
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1/ >/dev/null || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
+    networks:
+      - hs_onboard_isolated
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.${COMPOSE_PROJECT_NAME}-web.rule=Host(`${WEB_FQDN}`)
+      - traefik.http.routers.${COMPOSE_PROJECT_NAME}-web.entrypoints=websecure
+      - traefik.http.routers.${COMPOSE_PROJECT_NAME}-web.tls.certresolver=${TRAEFIK_CERT_RESOLVER:-letsencrypt}
+      - traefik.http.services.${COMPOSE_PROJECT_NAME}-web.loadbalancer.server.port=80

@@ -1,0 +1,16 @@
+# Merge with docker-compose.yml when Traefik lives on another Docker network.
+# docker compose -f docker-compose.yml -f docker-compose.traefik-network.yml --env-file .env up -d --build
+# Set TRAEFIK_DOCKER_NETWORK in .env (e.g. web, traefik_default).
+
+networks:
+  traefik_edge:
+    external: true
+    name: ${TRAEFIK_DOCKER_NETWORK}
+
+services:
+  onboarding-web:
+    networks:
+      - hs_onboard_isolated
+      - traefik_edge
+    labels:
+      - traefik.docker.network=${TRAEFIK_DOCKER_NETWORK}

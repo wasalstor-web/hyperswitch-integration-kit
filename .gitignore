@@ -1,0 +1,21 @@
+.supabase-access-token
+.supabase-project-ref
+.env
+.env.*
+!.env.example
+
+build/
+supabase/.temp/
+web/node_modules/
+web/dist/
+web/.env.local
+deploy/hostinger/.env
+
+# OS / IDE
+.DS_Store
+Thumbs.db
+*.log
+.cursor/
+.idea/
+*.swp
+*.swo

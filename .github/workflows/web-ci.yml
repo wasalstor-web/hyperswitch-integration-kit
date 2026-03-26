@@ -1,0 +1,54 @@
+name: Web CI
+
+on:
+  push:
+    paths:
+      - "web/**"
+      - "scripts/**"
+      - ".github/workflows/**"
+      - ".gitignore"
+      - "LICENSE"
+      - "supabase/migrations/**"
+  pull_request:
+    paths:
+      - "web/**"
+      - "scripts/**"
+      - ".github/workflows/**"
+      - ".gitignore"
+      - "LICENSE"
+      - "supabase/migrations/**"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Publish readiness (no build)
+        shell: pwsh
+        run: ./scripts/verify-publish-ready.ps1 -SkipBuild
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install and build SPA
+        working-directory: web
+        env:
+          VITE_SUPABASE_URL: https://YOUR_PROJECT.supabase.co
+          VITE_SUPABASE_ANON_KEY: ""
+        run: |
+          npm ci
+          npm run build
+
+      - name: Scan dist for obvious leaks
+        shell: pwsh
+        run: ./scripts/verify-publish-ready.ps1 -ScanDistOnly
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: onboarding-spa-dist
+          path: web/dist/
+          if-no-files-found: error

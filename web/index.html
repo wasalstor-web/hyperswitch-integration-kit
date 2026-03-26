@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>تسجيل — بريد، OTP، Hyperswitch</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --bg: #0f1419;
+        --card: #1a222c;
+        --text: #e7ecf1;
+        --muted: #8b9aab;
+        --accent: #3d8bfd;
+        --ok: #34c759;
+        --err: #ff453a;
+        --warn: #ffb020;
+        --border: #2a3544;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        font-family: "IBM Plex Sans Arabic", system-ui, sans-serif;
+        background: radial-gradient(1200px 600px at 80% -10%, #1a2a44 0%, var(--bg) 55%);
+        color: var(--text);
+        line-height: 1.5;
+      }
+      .wrap {
+        max-width: 440px;
+        margin: 0 auto;
+        padding: 2rem 1.25rem 4rem;
+      }
+      h1 {
+        font-size: 1.35rem;
+        font-weight: 700;
+        margin: 0 0 0.35rem;
+      }
+      .sub {
+        color: var(--muted);
+        font-size: 0.9rem;
+        margin-bottom: 1.75rem;
+      }
+      .steps {
+        display: flex;
+        gap: 0.35rem;
+        flex-wrap: wrap;
+        margin-bottom: 1.5rem;
+      }
+      .steps span {
+        font-size: 0.72rem;
+        padding: 0.2rem 0.5rem;
+        border-radius: 999px;
+        background: var(--card);
+        border: 1px solid var(--border);
+        color: var(--muted);
+      }
+      .steps span.on {
+        color: var(--text);
+        border-color: var(--accent);
+        background: rgba(61, 139, 253, 0.12);
+      }
+      .card {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        padding: 1.25rem 1.35rem;
+        margin-bottom: 1rem;
+      }
+      label {
+        display: block;
+        font-size: 0.82rem;
+        color: var(--muted);
+        margin-bottom: 0.35rem;
+      }
+      input {
+        width: 100%;
+        padding: 0.65rem 0.75rem;
+        border-radius: 8px;
+        border: 1px solid var(--border);
+        background: #121820;
+        color: var(--text);
+        font: inherit;
+        margin-bottom: 0.85rem;
+      }
+      input:focus {
+        outline: none;
+        border-color: var(--accent);
+      }
+      button {
+        width: 100%;
+        padding: 0.7rem 1rem;
+        border: none;
+        border-radius: 8px;
+        background: var(--accent);
+        color: #fff;
+        font: inherit;
+        font-weight: 600;
+        cursor: pointer;
+      }
+      button:disabled {
+        opacity: 0.45;
+        cursor: not-allowed;
+      }
+      button.secondary {
+        background: transparent;
+        border: 1px solid var(--border);
+        color: var(--text);
+        margin-top: 0.5rem;
+      }
+      .msg {
+        font-size: 0.85rem;
+        padding: 0.65rem 0.75rem;
+        border-radius: 8px;
+        margin-top: 0.75rem;
+        white-space: pre-wrap;
+      }
+      .msg.ok {
+        background: rgba(52, 199, 89, 0.12);
+        color: #8ee99f;
+      }
+      .msg.err {
+        background: rgba(255, 69, 58, 0.12);
+        color: #ff8a80;
+      }
+      .hidden {
+        display: none !important;
+      }
+      .card.errline {
+        border-color: var(--err);
+      }
+      .card.errline strong {
+        color: #ff8a80;
+      }
+      .card.warn {
+        border-color: var(--warn);
+      }
+      .card.warn strong {
+        color: var(--warn);
+      }
+      #alerts .card {
+        font-size: 0.88rem;
+      }
+      #alerts a {
+        color: var(--accent);
+      }
+      code {
+        font-size: 0.78rem;
+        background: #121820;
+        padding: 0.15rem 0.35rem;
+        border-radius: 4px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <h1>إكمال التسجيل</h1>
+      <p class="sub">بريد → تأكيد → OTP → ربط Hyperswitch</p>
+      <div class="steps" id="steps"></div>
+      <div id="alerts"></div>
+      <div id="panels"></div>
+      <p class="sub" style="margin-top: 2rem">
+        اضبط <code>.env.local</code> ثم <code>npm run dev</code> — واجعل
+        <code>PUBLIC_APP_VERIFY_URL</code> في أسرار الدوال يشير إلى هذا العنوان (مثلاً
+        <code>http://localhost:5173</code>).
+      </p>
+    </div>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>

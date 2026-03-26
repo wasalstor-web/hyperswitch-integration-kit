@@ -1,0 +1,1 @@
+-- Intentionally empty; onboarding schema is migration-only.
