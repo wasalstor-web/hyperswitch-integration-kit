@@ -26,6 +26,7 @@ export async function initDatabase(): Promise<PrismaClient> {
     });
     await engine.waitReady;
     await ensurePgliteMigrations(engine);
+    await ensurePgliteEdfapayColumns(engine);
 
     // PGlite/adapter يُستوردان ديناميكياً؛ TypeScript يرى نسختين من أنواع PGlite (import vs require).
     const adapter = new PrismaPGlite(engine as never);
@@ -51,12 +52,17 @@ type PgliteForMigrations = {
 };
 
 async function ensurePgliteMigrations(engine: PgliteForMigrations): Promise<void> {
+  let hasSessions = false;
   try {
     await engine.query('SELECT 1 FROM "onboarding_sessions" LIMIT 1');
-    console.log("[db] PGlite: الجداول موجودة — تخطي الهجرات");
-    return;
+    hasSessions = true;
   } catch {
     /* أول تشغيل */
+  }
+
+  if (hasSessions) {
+    console.log("[db] PGlite: الجداول موجودة — تخطي هجرات الإنشاء الكاملة");
+    return;
   }
 
   const migrationsRoot = join(process.cwd(), "prisma", "migrations");
@@ -71,5 +77,22 @@ async function ensurePgliteMigrations(engine: PgliteForMigrations): Promise<void
     const sql = readFileSync(sqlPath, "utf8");
     await engine.exec(sql);
     console.log(`[db] PGlite: طُبّقت ${dir}`);
+  }
+}
+
+/** إضافة أعمدة edfapay عند قواعد PGlite قديمة (بعد تخطي الهجرات الكاملة) */
+async function ensurePgliteEdfapayColumns(engine: PgliteForMigrations): Promise<void> {
+  try {
+    await engine.query('SELECT "edfapay_profile_code" FROM "onboarding_sessions" LIMIT 1');
+  } catch {
+    try {
+      await engine.exec(`
+        ALTER TABLE "onboarding_sessions" ADD COLUMN IF NOT EXISTS "edfapay_profile_code" TEXT;
+        ALTER TABLE "onboarding_sessions" ADD COLUMN IF NOT EXISTS "edfapay_linked_at" TIMESTAMPTZ(6);
+      `);
+      console.log("[db] PGlite: طُبّقت أعمدة ربط EdfaPay");
+    } catch (e) {
+      console.warn("[db] PGlite: تعذّر إضافة أعمدة edfapay (ربما الجدول غير موجود بعد):", e);
+    }
   }
 }

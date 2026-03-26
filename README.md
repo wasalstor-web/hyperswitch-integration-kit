@@ -60,6 +60,8 @@ npm run db:deploy
 npm run server:dev
 ```
 
+بديلاً (سطر واحد بعد تشغيل Docker Desktop): `npm run db:deploy:dev` — يشغّل `docker-compose.dev.yml` ويطبّق الهجرات على المنفذ `5433`.
+
 في طرفية أخرى:
 
 ```powershell

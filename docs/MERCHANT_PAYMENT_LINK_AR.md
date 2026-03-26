@@ -30,7 +30,9 @@
 
 هجرات: Prisma `20260327120000_onboarding_edfapay_link` و Supabase `20260327120000_onboarding_edfapay_link.sql`.
 
-**تطوير محلي بـ PGlite:** إن كان الجدول موجوداً مسبقاً ولم تُطبَّق الهجرة، احذف `.data/pglite` مرة واحدة أو نفّذ SQL الهجرة يدوياً في Studio، ثم أعد التشغيل.
+**تطوير محلي بـ PGlite:** عند تشغيل الخادم (`npm run server:dev`) يُضاف تلقائياً عمودا `edfapay_*` إن كان الجدول قديماً (`server/src/db.ts`). بديلاً: احذف `.data/pglite` لإعادة بناء كامل من هجرات Prisma.
+
+**Postgres عبر Docker:** من جذر المشروع: `npm run db:deploy:dev` (يشغّل `docker-compose.dev.yml` ثم `prisma migrate deploy`) — يتطلب Docker Desktop.
 
 ## ما بعد الربط
 
