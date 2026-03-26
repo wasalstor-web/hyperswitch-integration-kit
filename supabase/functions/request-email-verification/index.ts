@@ -45,8 +45,53 @@ Deno.serve(async (req) => {
   const tokenHash = await sha256Hex(rawToken);
   const expires = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
 
-  const { error: upErr } = await supabase.from("onboarding_sessions").upsert(
-    {
+  const { data: existing, error: selErr } = await supabase
+    .from("onboarding_sessions")
+    .select("email, completed_at")
+    .eq("email", email)
+    .maybeSingle();
+
+  if (selErr) {
+    console.error(selErr);
+    return new Response(JSON.stringify({ error: "Database error" }), {
+      status: 500,
+      headers: { ...cors, "Content-Type": "application/json" },
+    });
+  }
+
+  if (existing?.completed_at) {
+    return new Response(
+      JSON.stringify({
+        error:
+          "Onboarding already completed for this email. Start a new session or contact support.",
+      }),
+      { status: 409, headers: { ...cors, "Content-Type": "application/json" } },
+    );
+  }
+
+  if (existing) {
+    const { error: upErr } = await supabase
+      .from("onboarding_sessions")
+      .update({
+        email_verified: false,
+        email_token_hash: tokenHash,
+        email_token_expires_at: expires,
+        otp_code_hash: null,
+        otp_expires_at: null,
+        otp_attempts: 0,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("email", email);
+
+    if (upErr) {
+      console.error(upErr);
+      return new Response(JSON.stringify({ error: "Database error" }), {
+        status: 500,
+        headers: { ...cors, "Content-Type": "application/json" },
+      });
+    }
+  } else {
+    const { error: insErr } = await supabase.from("onboarding_sessions").insert({
       email,
       email_verified: false,
       email_token_hash: tokenHash,
@@ -56,16 +101,15 @@ Deno.serve(async (req) => {
       otp_attempts: 0,
       completed_at: null,
       updated_at: new Date().toISOString(),
-    },
-    { onConflict: "email" },
-  );
-
-  if (upErr) {
-    console.error(upErr);
-    return new Response(JSON.stringify({ error: "Database error" }), {
-      status: 500,
-      headers: { ...cors, "Content-Type": "application/json" },
     });
+
+    if (insErr) {
+      console.error(insErr);
+      return new Response(JSON.stringify({ error: "Database error" }), {
+        status: 500,
+        headers: { ...cors, "Content-Type": "application/json" },
+      });
+    }
   }
 
   const base =

@@ -1,0 +1,7 @@
+# انسخ إلى docker-compose.override.yml (لا يُرفع إلى git إن أضفتَه إلى .gitignore)
+# للتطوير المحلي: تعريض Postgres على المضيف مثل docker-compose.dev.yml
+
+services:
+  db:
+    ports:
+      - "5433:5432"

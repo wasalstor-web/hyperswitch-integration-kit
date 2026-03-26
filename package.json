@@ -13,7 +13,9 @@
     "db:validate": "prisma validate",
     "server:dev": "tsx watch server/src/index.ts",
     "server:start": "tsx server/src/index.ts",
+    "server:build": "tsc -p server/tsconfig.build.json",
     "server:typecheck": "tsc -p server/tsconfig.json",
+    "test": "tsx --test server/src/hash.test.ts",
     "licenses:notices": "node scripts/generate-third-party-notices.mjs",
     "web:dev": "npm run dev --prefix web",
     "web:build": "npm run build --prefix web"
@@ -24,11 +26,11 @@
     "@prisma/client": "^6.19.0",
     "dotenv": "^16.6.1",
     "hono": "^4.11.1",
-    "pglite-prisma-adapter": "^0.6.1"
+    "pglite-prisma-adapter": "^0.6.1",
+    "prisma": "^6.19.0"
   },
   "devDependencies": {
     "@types/node": "^22.19.0",
-    "prisma": "^6.19.0",
     "tsx": "^4.21.0",
     "typescript": "^5.9.3"
   }

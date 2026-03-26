@@ -38,6 +38,16 @@
 
 ---
 
+## ج) خادم API في Docker (Postgres مباشر، بدون Edge)
+
+| # | الخطوة | المرجع |
+|---|--------|---------|
+| 1 | نسخ `.env.docker.example` → `.env` وضبط الأسرار والمنفذ | [DOCKER_STACK_AR.md](DOCKER_STACK_AR.md) |
+| 2 | `docker compose --env-file .env.docker up --build` محلياً | نفس المستند |
+| 3 | على VPS مع Traefik | صورة `docker/Dockerfile.api` خلف البروكسي؛ مجلد `deploy/hostinger` في هذا المشروع يبني **واجهة SPA فقط** — اربط الواجهة بعنوان الـ API العام (`VITE_API_BASE_URL`). |
+
+---
+
 ## Hyperswitch (منفصل)
 
 - بعد `verify-otp`، الدالة `register-hyperswitch-merchant` تحتاج **`HYPERSWITCH_BASE_URL`** تصل إليه حاوية الدوال.

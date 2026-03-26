@@ -37,6 +37,11 @@
 - **بدون `MESSAGE_GATEWAY_URL`:** لا يُستدعى أي خادم؛ الحالة في `message_outbox` = **`skipped`** (وليس `sent`).
 - **`MESSAGE_GATEWAY_TIMEOUT_MS`:** اختياري؛ افتراضي **15000** (ملّي ثانية) لمهلة طلب `fetch` إلى البوابة.
 
+### سجل `message_outbox` والرابط الحساس
+
+- لقالب **email_verification** تُحفَظ في `message_outbox.payload` قيمة **`verifyLink`** تتضمّن **التوكن السري** في الاستعلام. اعتبر الصفوف **بيانات حساسة**: صلاحيات DB، سياسة احتفاظ، وعدم تعريض القراءة في الإنتاج.
+- لقالب **otp** يُخزَّن في الخادم الحالي في الحمولة **وقت الانتهاء** فقط (الكود لا يُكتب في الـ outbox).
+
 ---
 
 ## 2) تسجيل العميل في Hyperswitch (`register-hyperswitch-merchant`)

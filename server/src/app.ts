@@ -1,7 +1,8 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
-import type { Prisma, PrismaClient } from "@prisma/client";
-import { OutboxStatus } from "@prisma/client";
+import type { PrismaClient } from "@prisma/client";
+import type { InputJsonValue } from "@prisma/client/runtime/library";
+import { honoCorsOrigin, jsonResponse } from "./cors.js";
 import { outboxStatusFromGateway, sendViaGateway } from "./gateway.js";
 import { randomOtp6, randomTokenHex, sha256Hex } from "./hash.js";
 import {
@@ -11,19 +12,7 @@ import {
   hyperswitchPublicSignup,
 } from "./hyperswitch.js";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
-
 const MAX_OTP_ATTEMPTS = 5;
-
-function json(data: unknown, status = 200) {
-  return new Response(JSON.stringify(data), {
-    status,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
-  });
-}
 
 export function createApp(prisma: PrismaClient) {
   const app = new Hono();
@@ -31,13 +20,15 @@ export function createApp(prisma: PrismaClient) {
   app.use(
     "/*",
     cors({
-      origin: "*",
+      origin: (origin) => honoCorsOrigin(origin),
       allowMethods: ["GET", "POST", "OPTIONS"],
       allowHeaders: ["authorization", "x-client-info", "apikey", "content-type"],
     }),
   );
 
-  app.get("/health", () => json({ ok: true, service: "hyperswitch-integration-kit-api" }));
+  app.get("/health", (c) =>
+    jsonResponse(c, { ok: true, service: "hyperswitch-integration-kit-api" }),
+  );
 
   app.use("/functions/v1/*", async (c, next) => {
     if (c.req.method === "OPTIONS") return next();
@@ -45,7 +36,7 @@ export function createApp(prisma: PrismaClient) {
     if (key) {
       const h = c.req.header("Authorization");
       if (h !== `Bearer ${key}`) {
-        return json({ error: "Unauthorized" }, 401);
+        return jsonResponse(c, { error: "Unauthorized" }, 401);
       }
     }
     return next();
@@ -59,10 +50,10 @@ export function createApp(prisma: PrismaClient) {
         .trim()
         .toLowerCase();
     } catch {
-      return json({ error: "Invalid JSON" }, 400);
+      return jsonResponse(c, { error: "Invalid JSON" }, 400);
     }
     if (!email || !email.includes("@")) {
-      return json({ error: "Invalid email" }, 400);
+      return jsonResponse(c, { error: "Invalid email" }, 400);
     }
 
     const rawToken = randomTokenHex(24);
@@ -70,32 +61,47 @@ export function createApp(prisma: PrismaClient) {
     const expires = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
 
     try {
-      await prisma.onboardingSession.upsert({
-        where: { email },
-        create: {
-          email,
-          emailVerified: false,
-          emailTokenHash: tokenHash,
-          emailTokenExpiresAt: new Date(expires),
-          otpCodeHash: null,
-          otpExpiresAt: null,
-          otpAttempts: 0,
-          completedAt: null,
-          hyperswitchMerchantId: null,
-        },
-        update: {
-          emailVerified: false,
-          emailTokenHash: tokenHash,
-          emailTokenExpiresAt: new Date(expires),
-          otpCodeHash: null,
-          otpExpiresAt: null,
-          otpAttempts: 0,
-          completedAt: null,
-        },
-      });
+      const existing = await prisma.onboardingSession.findUnique({ where: { email } });
+      if (existing?.completedAt) {
+        return jsonResponse(
+          c,
+          {
+            error:
+              "Onboarding already completed for this email. Start a new session or contact support.",
+          },
+          409,
+        );
+      }
+      if (existing) {
+        await prisma.onboardingSession.update({
+          where: { email },
+          data: {
+            emailVerified: false,
+            emailTokenHash: tokenHash,
+            emailTokenExpiresAt: new Date(expires),
+            otpCodeHash: null,
+            otpExpiresAt: null,
+            otpAttempts: 0,
+          },
+        });
+      } else {
+        await prisma.onboardingSession.create({
+          data: {
+            email,
+            emailVerified: false,
+            emailTokenHash: tokenHash,
+            emailTokenExpiresAt: new Date(expires),
+            otpCodeHash: null,
+            otpExpiresAt: null,
+            otpAttempts: 0,
+            completedAt: null,
+            hyperswitchMerchantId: null,
+          },
+        });
+      }
     } catch (e) {
       console.error(e);
-      return json({ error: "Database error" }, 500);
+      return jsonResponse(c, { error: "Database error" }, 500);
     }
 
     const base = process.env.PUBLIC_APP_VERIFY_URL?.trim() ?? "https://your-frontend.example/verify-email";
@@ -107,7 +113,7 @@ export function createApp(prisma: PrismaClient) {
       template: "email_verification",
       data: { verifyLink, expires },
     });
-    const outboxStatus = outboxStatusFromGateway(gw) as OutboxStatus;
+    const outboxStatus = outboxStatusFromGateway(gw);
 
     const providerBodyObj: Record<string, unknown> =
       gw.providerBody && typeof gw.providerBody === "object" && gw.providerBody !== null
@@ -123,7 +129,7 @@ export function createApp(prisma: PrismaClient) {
         payload: { verifyLink, expires },
         status: outboxStatus,
         providerStatus: gw.httpStatus ?? null,
-        providerBody: providerBodyObj as Prisma.InputJsonValue,
+        providerBody: providerBodyObj as InputJsonValue,
       },
     });
 
@@ -134,7 +140,7 @@ export function createApp(prisma: PrismaClient) {
           ? " (فشل الإرسال عبر البوابة — راجع message_outbox وإعدادات البوابة)"
           : "";
 
-    return json({
+    return jsonResponse(c, {
       ok: true,
       gateway: outboxStatus,
       message: "If the email exists in our system, a verification link was sent." + gatewayHint,
@@ -152,19 +158,19 @@ export function createApp(prisma: PrismaClient) {
         .toLowerCase();
       token = String(j.token ?? "").trim();
     } catch {
-      return json({ error: "Invalid JSON" }, 400);
+      return jsonResponse(c,{ error: "Invalid JSON" }, 400);
     }
     if (!email || !token) {
-      return json({ error: "email and token required" }, 400);
+      return jsonResponse(c,{ error: "email and token required" }, 400);
     }
 
     const hash = sha256Hex(token);
     const row = await prisma.onboardingSession.findUnique({ where: { email } });
     if (!row) {
-      return json({ error: "Invalid or expired link" }, 400);
+      return jsonResponse(c,{ error: "Invalid or expired link" }, 400);
     }
     if (row.emailVerified) {
-      return json({ ok: true, alreadyVerified: true });
+      return jsonResponse(c,{ ok: true, alreadyVerified: true });
     }
     if (
       !row.emailTokenHash ||
@@ -172,7 +178,7 @@ export function createApp(prisma: PrismaClient) {
       !row.emailTokenExpiresAt ||
       row.emailTokenExpiresAt < new Date()
     ) {
-      return json({ error: "Invalid or expired token" }, 400);
+      return jsonResponse(c,{ error: "Invalid or expired token" }, 400);
     }
 
     await prisma.onboardingSession.update({
@@ -184,7 +190,7 @@ export function createApp(prisma: PrismaClient) {
       },
     });
 
-    return json({
+    return jsonResponse(c,{
       ok: true,
       nextStep: "request_otp",
       message: "Email verified. Call request-otp next.",
@@ -199,15 +205,15 @@ export function createApp(prisma: PrismaClient) {
         .trim()
         .toLowerCase();
     } catch {
-      return json({ error: "Invalid JSON" }, 400);
+      return jsonResponse(c,{ error: "Invalid JSON" }, 400);
     }
 
     const row = await prisma.onboardingSession.findUnique({ where: { email } });
     if (!row || !row.emailVerified) {
-      return json({ error: "Email not verified. Complete email step first." }, 403);
+      return jsonResponse(c,{ error: "Email not verified. Complete email step first." }, 403);
     }
     if (row.completedAt) {
-      return json({ error: "Onboarding already completed" }, 400);
+      return jsonResponse(c,{ error: "Onboarding already completed" }, 400);
     }
 
     const otp = randomOtp6();
@@ -225,7 +231,7 @@ export function createApp(prisma: PrismaClient) {
       });
     } catch (e) {
       console.error(e);
-      return json({ error: "Failed to store OTP" }, 500);
+      return jsonResponse(c,{ error: "Failed to store OTP" }, 500);
     }
 
     const gw = await sendViaGateway({
@@ -234,7 +240,7 @@ export function createApp(prisma: PrismaClient) {
       template: "otp",
       data: { code: otp, expires: otpExpires },
     });
-    const outboxStatus = outboxStatusFromGateway(gw) as OutboxStatus;
+    const outboxStatus = outboxStatusFromGateway(gw);
 
     const providerBodyObj: Record<string, unknown> =
       gw.providerBody && typeof gw.providerBody === "object" && gw.providerBody !== null
@@ -250,7 +256,7 @@ export function createApp(prisma: PrismaClient) {
         payload: { expires: otpExpires },
         status: outboxStatus,
         providerStatus: gw.httpStatus ?? null,
-        providerBody: providerBodyObj as Prisma.InputJsonValue,
+        providerBody: providerBodyObj as InputJsonValue,
       },
     });
 
@@ -261,7 +267,7 @@ export function createApp(prisma: PrismaClient) {
           ? " (فشل الإرسال عبر البوابة)"
           : "";
 
-    return json({
+    return jsonResponse(c,{
       ok: true,
       gateway: outboxStatus,
       message: "OTP sent (dev: set DANGEROUS_RETURN_OTP=true to include code)" + gatewayHint,
@@ -281,21 +287,21 @@ export function createApp(prisma: PrismaClient) {
         .replace(/\D/g, "")
         .slice(0, 6);
     } catch {
-      return json({ error: "Invalid JSON" }, 400);
+      return jsonResponse(c,{ error: "Invalid JSON" }, 400);
     }
     if (!email || code.length !== 6) {
-      return json({ error: "email and 6-digit code required" }, 400);
+      return jsonResponse(c,{ error: "email and 6-digit code required" }, 400);
     }
 
     const row = await prisma.onboardingSession.findUnique({ where: { email } });
     if (!row || !row.emailVerified) {
-      return json({ error: "Invalid session" }, 400);
+      return jsonResponse(c,{ error: "Invalid session" }, 400);
     }
     if ((row.otpAttempts ?? 0) >= MAX_OTP_ATTEMPTS) {
-      return json({ error: "Too many attempts. Request a new OTP." }, 429);
+      return jsonResponse(c,{ error: "Too many attempts. Request a new OTP." }, 429);
     }
     if (!row.otpCodeHash || !row.otpExpiresAt || row.otpExpiresAt < new Date()) {
-      return json({ error: "No valid OTP. Request a new one." }, 400);
+      return jsonResponse(c,{ error: "No valid OTP. Request a new one." }, 400);
     }
 
     const hash = sha256Hex(code);
@@ -304,7 +310,7 @@ export function createApp(prisma: PrismaClient) {
         where: { email },
         data: { otpAttempts: (row.otpAttempts ?? 0) + 1 },
       });
-      return json({ error: "Wrong code" }, 400);
+      return jsonResponse(c,{ error: "Wrong code" }, 400);
     }
 
     const now = new Date();
@@ -318,7 +324,7 @@ export function createApp(prisma: PrismaClient) {
       },
     });
 
-    return json({
+    return jsonResponse(c,{
       ok: true,
       verified: true,
       message:
@@ -329,7 +335,7 @@ export function createApp(prisma: PrismaClient) {
   app.post("/functions/v1/register-hyperswitch-merchant", async (c) => {
     const base = hyperswitchBaseUrl();
     if (!base) {
-      return json({ error: "HYPERSWITCH_BASE_URL not configured" }, 500);
+      return jsonResponse(c,{ error: "HYPERSWITCH_BASE_URL not configured" }, 500);
     }
 
     let email: string;
@@ -345,19 +351,19 @@ export function createApp(prisma: PrismaClient) {
       company_name = String(j.company_name ?? "").trim();
       name = String(j.name ?? j.display_name ?? company_name).trim() || company_name;
     } catch {
-      return json({ error: "Invalid JSON" }, 400);
+      return jsonResponse(c,{ error: "Invalid JSON" }, 400);
     }
 
     if (!email || !password || !company_name) {
-      return json({ error: "email, password, and company_name required" }, 400);
+      return jsonResponse(c,{ error: "email, password, and company_name required" }, 400);
     }
 
     const row = await prisma.onboardingSession.findUnique({ where: { email } });
     if (!row?.completedAt) {
-      return json({ error: "أكمل التحقق (بريد + OTP) قبل ربط Hyperswitch" }, 403);
+      return jsonResponse(c,{ error: "أكمل التحقق (بريد + OTP) قبل ربط Hyperswitch" }, 403);
     }
     if (row.hyperswitchMerchantId) {
-      return json({
+      return jsonResponse(c,{
         ok: true,
         alreadyLinked: true,
         merchant_id: row.hyperswitchMerchantId,
@@ -376,7 +382,7 @@ export function createApp(prisma: PrismaClient) {
     try {
       if (mode === "admin_merchant") {
         if (!adminKey) {
-          return json({ error: "admin_merchant يتطلب HYPERSWITCH_ADMIN_API_KEY" }, 500);
+          return jsonResponse(c,{ error: "admin_merchant يتطلب HYPERSWITCH_ADMIN_API_KEY" }, 500);
         }
         const { is_email_sent } = await hyperswitchAdminSignupWithMerchant(base, adminKey, {
           name,
@@ -384,7 +390,7 @@ export function createApp(prisma: PrismaClient) {
           password,
           company_name,
         });
-        return json({
+        return jsonResponse(c,{
           ok: true,
           mode: "admin_merchant",
           is_email_sent,
@@ -405,7 +411,7 @@ export function createApp(prisma: PrismaClient) {
 
       const devJwt = process.env.DANGEROUS_RETURN_HS_JWT === "true" ? token : undefined;
 
-      return json({
+      return jsonResponse(c,{
         ok: true,
         mode: "public_signup",
         merchant_id,
@@ -416,7 +422,7 @@ export function createApp(prisma: PrismaClient) {
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
       console.error(msg);
-      return json({ error: msg }, 502);
+      return jsonResponse(c,{ error: msg }, 502);
     }
   });
 

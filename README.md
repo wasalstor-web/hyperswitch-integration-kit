@@ -68,6 +68,21 @@ npm run dev
 
 التفاصيل: [server/README.md](server/README.md)
 
+## Docker: Postgres + API + بوابة وهمية
+
+لتشغيل **قاعدة البيانات** و**خادم API** و**بوابة رسائل وهمية** معاً (بدون `docker-compose.dev.yml` المنفصل):
+
+```powershell
+cd path\to\hyperswitch-integration-kit
+copy .env.docker.example .env.docker
+# عدّل PUBLIC_APP_VERIFY_URL و API_PUBLISH_PORT إن لزم
+docker compose --env-file .env.docker up --build
+```
+
+- المنفذ الافتراضي للـ API على المضيف: **8788** (قابل للتغيير عبر `API_PUBLISH_PORT`).
+- للإنتاج خلف Traefik أو على VPS: ابنِ الصورة من `docker/Dockerfile.api` واضبط `CORS_ORIGIN` و`DATABASE_URL` وأسرار البوابة كما في المثال.
+- الشرح الكامل والمتغيرات: [docs/DOCKER_STACK_AR.md](docs/DOCKER_STACK_AR.md).
+
 ## واجهة الويب (تدفق كامل — Supabase)
 
 ```powershell
@@ -110,7 +125,7 @@ node tools/mock-message-gateway.mjs
 | `.\scripts\verify-publish-ready.ps1` | قبل الرفع أو الأرشفة: يتحقق من `.gitignore` و`LICENSE` و`THIRD_PARTY_NOTICES.md` و`docs/OPEN_SOURCE_INTERFACES_AR.md` و`package-lock` (الجذر + `web/`) وعدم تتبع أسرار في git، ثم يبني الواجهة بقيم `VITE_*` قالبية ويفحص `dist`. خيارات: `-SkipBuild`، `-ScanDistOnly`، `-ArabicUI`. |
 | `npm run licenses:notices` | يحدّث [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) من ملفات القفل — نفّذه بعد `npm install` الذي يغيّر الاعتماديات. |
 
-**CI:** عند رفع المستودع إلى GitHub، سير **`web-ci.yml`** يشغّل نفس الفحوصات ثم يبني الواجهة بمتغيرات قالبية ويرفع **`dist`** كـ artifact باسم `onboarding-spa-dist`.
+**CI:** عند رفع المستودع إلى GitHub، سير **`web-ci.yml`** يشغّل `server:build` و`npm test` وبناء صورة **`docker/Dockerfile.api`** ثم يحدّث تراخيص npm ويفحص **`THIRD_PARTY_NOTICES.md`**، ثم يبني الواجهة بمتغيرات قالبية ويرفع **`dist`** كـ artifact باسم `onboarding-spa-dist`.
 
 ## قائمة تحقق لـ «إكمال كل شيء»
 

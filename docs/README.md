@@ -31,5 +31,6 @@
 |---------|---------|
 | [../prisma/README.md](../prisma/README.md) | Postgres مباشر عبر Prisma |
 | [../server/README.md](../server/README.md) | خادم Hono (بديل Edge Functions محلياً) |
+| [DOCKER_STACK_AR.md](DOCKER_STACK_AR.md) | Docker: Postgres + API + بوابة وهمية، المتغيرات، النشر خلف Traefik |
 | [../supabase/migrations/](../supabase/migrations/) | مسار Supabase الأصلي (SQL) |
 | [../THIRD_PARTY_NOTICES.md](../THIRD_PARTY_NOTICES.md) | حزم npm والتراخيص (توليد: `npm run licenses:notices`) |

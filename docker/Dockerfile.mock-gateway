@@ -1,0 +1,7 @@
+FROM node:22-alpine
+WORKDIR /app
+COPY tools/mock-message-gateway.mjs ./mock.mjs
+ENV MOCK_GATEWAY_PORT=8787
+EXPOSE 8787
+USER node
+CMD ["node", "mock.mjs"]

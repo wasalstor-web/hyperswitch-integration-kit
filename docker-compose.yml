@@ -1,0 +1,61 @@
+# تكديس إنتاج/تجربة: Postgres + API + بوابة وهمية للرسائل
+# من جذر المشروع:
+#   cp .env.docker.example .env.docker
+#   docker compose --env-file .env.docker up -d --build
+#
+# الواجهة تبقى محلية (Vite) أو تبنى مع deploy/hostinger؛ عرّف PUBLIC_APP_VERIFY_URL لأصل الواجهة.
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: app
+      POSTGRES_PASSWORD: app
+      POSTGRES_DB: onboarding
+    volumes:
+      - hs_kit_pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U app -d onboarding"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - hs_internal
+
+  mock-gateway:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.mock-gateway
+    restart: unless-stopped
+    networks:
+      - hs_internal
+
+  api:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.api
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+      mock-gateway:
+        condition: service_started
+    environment:
+      NODE_ENV: production
+      PORT: "8788"
+      DATABASE_URL: postgresql://app:app@db:5432/onboarding
+      USE_PGLITE: "false"
+      MESSAGE_GATEWAY_URL: http://mock-gateway:8787
+      PUBLIC_APP_VERIFY_URL: ${PUBLIC_APP_VERIFY_URL:-http://localhost:5173}
+    ports:
+      - "${API_PUBLISH_PORT:-8788}:8788"
+    networks:
+      - hs_internal
+
+networks:
+  hs_internal:
+    driver: bridge
+
+volumes:
+  hs_kit_pg_data:

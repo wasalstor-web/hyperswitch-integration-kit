@@ -3,10 +3,14 @@
 .env
 .env.*
 !.env.example
+!.env.docker.example
+docker-compose.override.yml
 
 build/
+server/dist/
 .data/
 node_modules/
+node_modules.bak/
 supabase/.temp/
 web/node_modules/
 web/dist/
