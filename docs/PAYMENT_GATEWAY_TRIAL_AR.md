@@ -2,6 +2,8 @@
 
 هذا المسار **ليس** [بوابة الرسائل](GATEWAY_HYPERSWITCH_AR.md) (`MESSAGE_GATEWAY_URL`) ولا يستبدل إعداد **موصل الدفع** داخل **Hyperswitch**. الهدف: التحقق أن **معرّف العميل** و**السر** يعملان مع **نقطة طلب التوكن** التي يزوّدكم بها مزود «ادفع» أو البنك.
 
+**إن كنتم على EdfaPay / مبسّط:** راجع [EDFAPAY_MUBASAT_AR.md](EDFAPAY_MUBASAT_AR.md) — الوثائق العامة لـ EdfaPay تشرح غالباً **hash + client_key** للمدفوعات ورموز **API من الإعدادات**، وقد يختلف ذلك عن مسار OAuth2 هنا.
+
 ## ملف أسرار منفصل (موصى به)
 
 1. انسخ `env.payment.local.template` إلى **`.env.payment.local`** في جذر المستودع.

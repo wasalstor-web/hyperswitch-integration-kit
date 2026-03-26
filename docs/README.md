@@ -17,6 +17,7 @@
 | [ARCHITECTURE_AR.md](ARCHITECTURE_AR.md) | مبدأ Supabase + Hyperswitch + بوابة الرسائل |
 | [GATEWAY_HYPERSWITCH_AR.md](GATEWAY_HYPERSWITCH_AR.md) | عقد بوابة الرسائل + تسجيل التاجر في Hyperswitch |
 | [PAYMENT_GATEWAY_TRIAL_AR.md](PAYMENT_GATEWAY_TRIAL_AR.md) | تجربة OAuth2 لبوابة الدفع (مسار probe على خادم API) |
+| [EDFAPAY_MUBASAT_AR.md](EDFAPAY_MUBASAT_AR.md) | بوابة مبسّط على EdfaPay، روابط الوثائق، والفرق عن مسار الـ probe |
 | [OPEN_SOURCE_INTERFACES_AR.md](OPEN_SOURCE_INTERFACES_AR.md) | عقود الواجهة الثابتة، محاذاة Hyperswitch، اعتماديات OSS |
 
 ## استضافة
