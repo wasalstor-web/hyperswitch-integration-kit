@@ -100,7 +100,7 @@ export async function probeEdfapaySale(cfg: EdfaPayConfig): Promise<EdfaPayProbe
   form.set("payer_zip", "12345");
   form.set("payer_email", payerEmail);
   form.set("payer_phone", "+966500000000");
-  form.set("payer_ip", "203.0.113.1");
+  form.set("payer_ip", process.env.EDFAPAY_PROBE_PAYER_IP?.trim() || "176.44.76.100");
   form.set("term_url_3ds", "https://example.com/3ds-return");
   form.set("auth", "N");
   form.set("recurring_init", "N");
