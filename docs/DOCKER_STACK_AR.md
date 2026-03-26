@@ -16,6 +16,8 @@ cp .env.docker.example .env.docker
 docker compose --env-file .env.docker up -d --build
 ```
 
+(اختياري) لتجربة **بوابة الدفع** داخل حاوية `api`: انسخ `env.payment.local.template` إلى `.env.payment.local` في الجذر — تُحقَن كمتغيرات بيئة للخدمة `api` دون دمجها في git.
+
 الواجهة: `web/.env.local` مع `VITE_API_BASE_URL=http://localhost:8788` (أو عنوان السيرفر).
 
 ## محلي: تعريض Postgres على المضيف

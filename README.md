@@ -1,5 +1,7 @@
 # Hyperswitch + Supabase — بريد ثم OTP
 
+**تجربة بوابة دفع (OAuth، ملف محلي):** انسخ [env.payment.local.template](env.payment.local.template) إلى `.env.payment.local` — التفاصيل في [docs/PAYMENT_GATEWAY_TRIAL_AR.md](docs/PAYMENT_GATEWAY_TRIAL_AR.md).
+
 **دليل الإكمال والنشر بالعربية:** [docs/complete-runbook-ar.md](docs/complete-runbook-ar.md)  
 **ترتيب النشر (سحابي ↔ سيرفر):** [docs/DEPLOY_ORDER_AR.md](docs/DEPLOY_ORDER_AR.md)  
 **فهرس الوثائق:** [docs/README.md](docs/README.md)  
