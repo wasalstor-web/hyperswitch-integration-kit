@@ -17,6 +17,7 @@
          → Edge: توليد 6 أرقام، hash، إرسال عبر البوابة
          → المستخدم يرسل الرمز          → verify-otp
          → register-hyperswitch-merchant (Edge + أسرار Hyperswitch) لإنشاء مستخدم/تاجر في البوابة
+         → link-edfapay-profile (اختياري لكن موصى به) — حفظ رمز ملف مبسّط/EdfaPay في onboarding_sessions
          → إصدار جلسة (Supabase Auth اختياري)
          → [Backendكم] مفاتيح الدفع والمعالجات من Hyperswitch بأمان
 ```
