@@ -21,6 +21,10 @@ docker compose --env-file .env.docker up --build
 
 الصورة تُشغّل `prisma migrate deploy` ثم `node server/dist/index.js`. التفاصيل والمتغيرات (بما فيها `CORS_ORIGIN` و`MESSAGE_GATEWAY_URL`): [../docs/DOCKER_STACK_AR.md](../docs/DOCKER_STACK_AR.md).
 
+## تجربة بوابة الدفع (OAuth2)
+
+للتحقق من **معرّف العميل + السر** مع نقطة **Token URL** من المزود (وليس لإتمام دفعة كاملة): راجع [../docs/PAYMENT_GATEWAY_TRIAL_AR.md](../docs/PAYMENT_GATEWAY_TRIAL_AR.md) ومسار `GET /functions/v1/payment-gateway-probe` عند `PAYMENT_GATEWAY_PROBE_ENABLED=true`.
+
 ## الأمان
 
 - `INTERNAL_API_KEY` في `.env` الجذر: يتطلب ترويسة `Authorization: Bearer …` على كل طلبات `/functions/v1/*`. عندها ضع نفس القيمة في `VITE_INTERNAL_API_KEY` في الواجهة.

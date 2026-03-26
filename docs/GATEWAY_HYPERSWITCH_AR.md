@@ -1,5 +1,7 @@
 # بوابة الرسائل + تسجيل العميل في Hyperswitch
 
+> **بوابة الدفع (OAuth):** مفاتيح مزوّد «ادفع» لا تُستبدل `MESSAGE_GATEWAY_URL`. للتجربة على خادم API فقط: [PAYMENT_GATEWAY_TRIAL_AR.md](PAYMENT_GATEWAY_TRIAL_AR.md).
+
 ## 1) بوابة الرسائل (`MESSAGE_GATEWAY_URL`)
 
 عند ضبط `MESSAGE_GATEWAY_URL` (واختياري `MESSAGE_GATEWAY_KEY`)، تستدعي الدوال `request-email-verification` و `request-otp` عنوانك بـ **POST** وJSON مثل:

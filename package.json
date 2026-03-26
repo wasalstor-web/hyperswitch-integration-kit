@@ -15,7 +15,7 @@
     "server:start": "tsx server/src/index.ts",
     "server:build": "tsc -p server/tsconfig.build.json",
     "server:typecheck": "tsc -p server/tsconfig.json",
-    "test": "tsx --test server/src/hash.test.ts",
+    "test": "tsx --test \"server/src/**/*.test.ts\"",
     "licenses:notices": "node scripts/generate-third-party-notices.mjs",
     "web:dev": "npm run dev --prefix web",
     "web:build": "npm run build --prefix web"

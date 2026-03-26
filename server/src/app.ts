@@ -6,6 +6,10 @@ import { honoCorsOrigin, jsonResponse } from "./cors.js";
 import { outboxStatusFromGateway, sendViaGateway } from "./gateway.js";
 import { randomOtp6, randomTokenHex, sha256Hex } from "./hash.js";
 import {
+  probePaymentGatewayToken,
+  readPaymentGatewayOAuthConfig,
+} from "./payment-provider-oauth.js";
+import {
   hyperswitchAdminSignupWithMerchant,
   hyperswitchBaseUrl,
   hyperswitchGetUserMerchantId,
@@ -330,6 +334,45 @@ export function createApp(prisma: PrismaClient) {
       message:
         "OTP OK. Next: create Supabase Auth session from your backend or call Hyperswitch APIs with server-side keys.",
     });
+  });
+
+  app.get("/functions/v1/payment-gateway-probe", async (c) => {
+    if (process.env.PAYMENT_GATEWAY_PROBE_ENABLED !== "true") {
+      return jsonResponse(
+        c,
+        {
+          error:
+            "المسار معطّل. للتجربة فقط: PAYMENT_GATEWAY_PROBE_ENABLED=true — ثم أعد الطلب. انظر docs/PAYMENT_GATEWAY_TRIAL_AR.md",
+        },
+        403,
+      );
+    }
+    const cfg = readPaymentGatewayOAuthConfig();
+    if (!cfg) {
+      return jsonResponse(c, {
+        ok: false,
+        configured: false,
+        message:
+          "أضِف PAYMENT_GATEWAY_TOKEN_URL و PAYMENT_GATEWAY_CLIENT_ID و PAYMENT_GATEWAY_CLIENT_SECRET في البيئة.",
+      });
+    }
+    try {
+      const r = await probePaymentGatewayToken(cfg);
+      return jsonResponse(c, {
+        ok: r.ok,
+        configured: true,
+        http_status: r.httpStatus,
+        access_token_received: r.accessTokenReceived,
+        merchant_profile_set: Boolean(process.env.PAYMENT_GATEWAY_MERCHANT_PROFILE?.trim()),
+        hint: r.ok
+          ? "تم التحقق من التوكن. عطّل PAYMENT_GATEWAY_PROBE_ENABLED بعد التجربة ولا تعرض body_preview في الإنتاج."
+          : "راجع Token URL ونمط المصادقة PAYMENT_GATEWAY_AUTH_MODE (form أو basic) ووثائق المزود.",
+        body_preview: r.bodyPreview,
+      });
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      return jsonResponse(c, { ok: false, error: msg }, 502);
+    }
   });
 
   app.post("/functions/v1/register-hyperswitch-merchant", async (c) => {
