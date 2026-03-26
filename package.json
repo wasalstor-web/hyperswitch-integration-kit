@@ -17,6 +17,7 @@
     "server:typecheck": "tsc -p server/tsconfig.json",
     "test": "tsx --test \"server/src/**/*.test.ts\"",
     "licenses:notices": "node scripts/generate-third-party-notices.mjs",
+    "probe:edfapay": "tsx scripts/edfapay-live-probe.ts",
     "web:dev": "npm run dev --prefix web",
     "web:build": "npm run build --prefix web"
   },

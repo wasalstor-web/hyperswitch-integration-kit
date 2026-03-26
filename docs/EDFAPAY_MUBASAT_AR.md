@@ -56,6 +56,24 @@ POST /functions/v1/edfapay-probe
 
 **أمان:** عطّل `EDFAPAY_PROBE_ENABLED` في الإنتاج؛ لا تعرض `body_preview` للعملاء.
 
+### تشغيل التحقق من الطرفية (بدون تشغيل الخادم)
+
+من جذر المستودع، بعد ضبط المتغيرات في البيئة:
+
+```bash
+npm run probe:edfapay
+```
+
+يمكن زيادة مهلة الاتصال (افتراضي 45 ثانية): `EDFAPAY_FETCH_TIMEOUT_MS=60000`.
+
+### استكشاف أعطال شائعة
+
+| العرض | تفسير محتمل |
+|--------|-------------|
+| **انتهاء مهلة** إلى `apidev.edfapay.com` | جدار ناري أو مزود إنترنت يحجب الوجهة؛ جرّب من شبكة أخرى أو استخدم `EDFAPAY_BASE_URL=https://api.edfapay.com` إن كانت أوراق الاعتماد للإنتاج. |
+| **HTTP 500** من `api.edfapay.com` | الطلب وصل لخوادم EdfaPay؛ قد يكون خطأ مؤقتاً لديهم، أو بيئة/بطاقة/تجزئة غير متوافقة — أرسل `timestamp` من الاستجابة لـ [techsupport@edfapay.com](mailto:techsupport@edfapay.com). |
+| **`AUTH_HASH_INVALID`** في JSON | السر ليس «Merchant password» الصحيح للتجزئة أو بريد/بطاقة لا يطابقان صيغة الـ hash. |
+
 ---
 
 ## علاقة هذا المشروع

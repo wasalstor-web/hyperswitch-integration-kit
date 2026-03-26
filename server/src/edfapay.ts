@@ -111,7 +111,13 @@ export async function probeEdfapaySale(cfg: EdfaPayConfig): Promise<EdfaPayProbe
   form.set("card_cvv2", cvv);
 
   const url = `${cfg.baseUrl}/payment/post`;
-  const res = await fetch(url, { method: "POST", body: form });
+  const rawMs = Number(process.env.EDFAPAY_FETCH_TIMEOUT_MS);
+  const timeoutMs = Number.isFinite(rawMs) && rawMs >= 5_000 ? rawMs : 45_000;
+  const res = await fetch(url, {
+    method: "POST",
+    body: form,
+    signal: AbortSignal.timeout(timeoutMs),
+  });
   const text = await res.text();
 
   let parsed: Record<string, unknown> | null = null;
