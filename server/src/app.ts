@@ -383,6 +383,83 @@ export function createApp(prisma: PrismaClient) {
     }
   });
 
+  app.post("/functions/v1/link-edfapay-profile", async (c) => {
+    let email: string;
+    let profileFromBody = "";
+    try {
+      const j = await c.req.json();
+      email = String(j.email ?? "")
+        .trim()
+        .toLowerCase();
+      const raw = j.profile_code ?? j.edfapay_profile_code;
+      if (raw != null) profileFromBody = String(raw).trim();
+    } catch {
+      return jsonResponse(c, { error: "Invalid JSON" }, 400);
+    }
+    if (!email) {
+      return jsonResponse(c, { error: "email required" }, 400);
+    }
+
+    if (!readEdfapayConfig()) {
+      return jsonResponse(
+        c,
+        {
+          error:
+            "منصة الدفع غير مهيأة على الخادم. اضبط EDFAPAY_CLIENT_KEY و EDFAPAY_HASH_PASSWORD — انظر docs/MERCHANT_PAYMENT_LINK_AR.md",
+        },
+        503,
+      );
+    }
+
+    const envProfile =
+      process.env.EDFAPAY_MERCHANT_PROFILE?.trim() ||
+      process.env.EDFAPAY_MERCHANT_CODE?.trim() ||
+      "";
+    const profileCode = profileFromBody || envProfile;
+    if (!profileCode) {
+      return jsonResponse(
+        c,
+        {
+          error:
+            "أدخل profile_code (من بوابة مبسّط) أو اضبط EDFAPAY_MERCHANT_PROFILE على الخادم لحساب موحّد.",
+        },
+        400,
+      );
+    }
+
+    const row = await prisma.onboardingSession.findUnique({ where: { email } });
+    if (!row?.completedAt) {
+      return jsonResponse(
+        c,
+        { error: "أكمل التحقق (بريد + OTP) قبل ربط ملف الدفع" },
+        403,
+      );
+    }
+
+    const hadLink = Boolean(row.edfapayLinkedAt);
+
+    await prisma.onboardingSession.update({
+      where: { email },
+      data: {
+        edfapayProfileCode: profileCode,
+        edfapayLinkedAt: new Date(),
+      },
+    });
+
+    return jsonResponse(c, {
+      ok: true,
+      updated: hadLink,
+      message:
+        "تم تسجيل ربط ملف الدفع على منصتك. أكمل إعداد المعالج في Hyperswitch ولوحة مبسّط حسب عقدكم مع EdfaPay.",
+      edfapay_profile_code: profileCode,
+      hyperswitch_merchant_id: row.hyperswitchMerchantId,
+      portals: {
+        mubasat: "https://mubasat.edfapay.com/login",
+        edfapay_docs: "https://docs.edfapay.com/",
+      },
+    });
+  });
+
   app.get("/functions/v1/payment-gateway-probe", async (c) => {
     if (process.env.PAYMENT_GATEWAY_PROBE_ENABLED !== "true") {
       return jsonResponse(

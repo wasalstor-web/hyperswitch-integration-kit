@@ -2,7 +2,7 @@
 
 **تجربة بوابة دفع (OAuth، ملف محلي):** انسخ [env.payment.local.template](env.payment.local.template) إلى `.env.payment.local` — التفاصيل في [docs/PAYMENT_GATEWAY_TRIAL_AR.md](docs/PAYMENT_GATEWAY_TRIAL_AR.md).
 
-**EdfaPay / مبسّط:** [بوابة الدخول](https://mubasat.edfapay.com/login) — شرح التكامل والوثائق في [docs/EDFAPAY_MUBASAT_AR.md](docs/EDFAPAY_MUBASAT_AR.md).
+**EdfaPay / مبسّط:** [بوابة الدخول](https://mubasat.edfapay.com/login) — شرح التكامل والوثائق في [docs/EDFAPAY_MUBASAT_AR.md](docs/EDFAPAY_MUBASAT_AR.md). **ربط التاجر بمنصتك + الدفع:** [docs/MERCHANT_PAYMENT_LINK_AR.md](docs/MERCHANT_PAYMENT_LINK_AR.md).
 
 **دليل الإكمال والنشر بالعربية:** [docs/complete-runbook-ar.md](docs/complete-runbook-ar.md)  
 **ترتيب النشر (سحابي ↔ سيرفر):** [docs/DEPLOY_ORDER_AR.md](docs/DEPLOY_ORDER_AR.md)  

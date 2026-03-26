@@ -25,6 +25,10 @@ docker compose --env-file .env.docker up --build
 
 للتحقق من **معرّف العميل + السر** مع نقطة **Token URL** من المزود (وليس لإتمام دفعة كاملة): راجع [../docs/PAYMENT_GATEWAY_TRIAL_AR.md](../docs/PAYMENT_GATEWAY_TRIAL_AR.md) ومسار `GET /functions/v1/payment-gateway-probe` عند `PAYMENT_GATEWAY_PROBE_ENABLED=true`.
 
+## ربط ملف الدفع للتاجر (بعد Hyperswitch)
+
+`POST /functions/v1/link-edfapay-profile` — يحفظ `edfapay_profile_code` و`edfapay_linked_at` بعد `verify-otp`. يتطلب تهيئة `EDFAPAY_*` على الخادم. التفاصيل: [../docs/MERCHANT_PAYMENT_LINK_AR.md](../docs/MERCHANT_PAYMENT_LINK_AR.md).
+
 ## تجربة EdfaPay (SALE sandbox)
 
 **معرّف العميل** = `client_key`، **السر** = كلمة مرور التجزئة للـ `hash`. مسار `POST /functions/v1/edfapay-probe` عند `EDFAPAY_PROBE_ENABLED=true` — التفاصيل: [../docs/EDFAPAY_MUBASAT_AR.md](../docs/EDFAPAY_MUBASAT_AR.md).

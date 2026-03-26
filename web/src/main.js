@@ -102,6 +102,7 @@ const STEP_LABELS = [
   "OTP",
   "التحقق",
   "Hyperswitch",
+  "مبسّط / الدفع",
   "تم",
 ];
 
@@ -191,6 +192,18 @@ function initPanels() {
       <input type="password" id="pw" autocomplete="new-password" />
       <button type="button" id="btn-hs">تسجيل في البوابة</button>
       <div id="out-hs"></div>
+    `,
+    ) +
+    panel(
+      "edfapay",
+      "الخطوة 6 — ربط ملف الدفع (مبسّط / EdfaPay)",
+      `
+      <p class="hint" id="edfapay-after-hs"></p>
+      <p class="hint">بعد التسجيل عندك على النطاق، نربط التاجر بمسار الدفع عبر منصتك وEdfaPay: يُخزَّن رمز الملف في قاعدة بياناتك (لا يُرسل السر من المتصفح).</p>
+      <label for="edf-profile">رمز الملف التجاري (من <a href="https://mubasat.edfapay.com/login" target="_blank" rel="noopener">بوابة مبسّط</a>)</label>
+      <input type="text" id="edf-profile" autocomplete="off" placeholder="اتركه فارغاً إن ضبط الخادم ملفاً موحّداً (EDFAPAY_MERCHANT_PROFILE)" />
+      <button type="button" id="btn-edfapay">تأكيد الربط مع منصتي ومسار الدفع</button>
+      <div id="out-edfapay"></div>
     `,
     ) +
     panel(
@@ -304,8 +317,37 @@ function initPanels() {
       let text = r.message || JSON.stringify(r, null, 2);
       if (r.merchant_id) text += `\n\nمعرّف التاجر: ${r.merchant_id}`;
       out.innerHTML = msg(text, "ok");
-      document.getElementById("done-text").textContent = text;
+      sessionStorage.setItem("onb_hs_done", text);
+      document.getElementById("edfapay-after-hs").textContent =
+        "تم ربط Hyperswitch. أكمل خطوة مبسّط/EdfaPay أدناه ليُسجَّل التاجر عندك وعلى مسار الدفع.";
       renderSteps(5);
+      showPanel("edfapay");
+    } catch (e) {
+      out.innerHTML = msg(e.message, "err");
+    }
+  };
+
+  document.getElementById("btn-edfapay").onclick = async () => {
+    const email = sessionEmail();
+    const profile = document.getElementById("edf-profile").value.trim();
+    const out = document.getElementById("out-edfapay");
+    out.innerHTML = "";
+    if (!email) {
+      out.innerHTML = msg("لا توجد جلسة بريد. ابدأ من الخطوة 1.", "err");
+      return;
+    }
+    try {
+      const body = { email };
+      if (profile) body.profile_code = profile;
+      const r = await invokeFn("link-edfapay-profile", body);
+      let text = r.message || "تم ربط ملف الدفع";
+      if (r.edfapay_profile_code) text += `\n\nالملف المسجّل: ${r.edfapay_profile_code}`;
+      if (r.hyperswitch_merchant_id) text += `\nHyperswitch merchant: ${r.hyperswitch_merchant_id}`;
+      if (r.portals?.mubasat) text += `\n\nلوحة مبسّط: ${r.portals.mubasat}`;
+      out.innerHTML = msg(text, "ok");
+      const hsBlock = sessionStorage.getItem("onb_hs_done") || "";
+      document.getElementById("done-text").textContent = [hsBlock, text].filter(Boolean).join("\n\n———\n\n");
+      renderSteps(6);
       showPanel("done");
     } catch (e) {
       out.innerHTML = msg(e.message, "err");
@@ -314,6 +356,7 @@ function initPanels() {
 
   document.getElementById("btn-reset").onclick = () => {
     sessionStorage.removeItem("onb_email");
+    sessionStorage.removeItem("onb_hs_done");
     location.href = location.pathname;
   };
 }

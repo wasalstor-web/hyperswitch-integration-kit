@@ -22,6 +22,7 @@
 | `request-otp` | `{ "email" }` | يتطلب بريداً مؤكداً مسبقاً. |
 | `verify-otp` | `{ "email", "code" }` | `code` ستة أرقام. |
 | `register-hyperswitch-merchant` | `{ "email", "password", "company_name", "name?" }` | الحقول الإلزامية ثابتة للتوافق مع خطوة الواجهة 5. |
+| `link-edfapay-profile` | `{ "email", "profile_code?" }` | بعد `verify-otp`؛ يحفظ `edfapay_profile_code` في `onboarding_sessions` — انظر [MERCHANT_PAYMENT_LINK_AR.md](MERCHANT_PAYMENT_LINK_AR.md). |
 
 **قاعدة المشروع:** مسار `server/src/app.ts` ودوال `supabase/functions/*` يجب أن يبقيا **متطابقين** في أسماء المسارات والحقول والأكواد المعنونة (4xx/403/500) قدر الإمكان؛ أي اختلاف يُوثَّق في [GATEWAY_HYPERSWITCH_AR.md](GATEWAY_HYPERSWITCH_AR.md) ويُحدَّث `main.js` في نفس التغيير.
 

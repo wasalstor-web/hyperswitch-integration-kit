@@ -33,6 +33,9 @@ model OnboardingSession {
   otpAttempts           Int       @default(0) @map("otp_attempts") @db.SmallInt
   completedAt           DateTime? @map("completed_at") @db.Timestamptz(6)
   hyperswitchMerchantId String?   @map("hyperswitch_merchant_id")
+  /** رمز الملف التجاري في مبسّط/EdfaPay (لكل تاجر) أو يُملأ من إعداد المنصة */
+  edfapayProfileCode    String?   @map("edfapay_profile_code")
+  edfapayLinkedAt       DateTime? @map("edfapay_linked_at") @db.Timestamptz(6)
   createdAt             DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt             DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
 
