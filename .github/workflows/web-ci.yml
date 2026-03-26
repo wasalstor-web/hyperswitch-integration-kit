@@ -11,6 +11,10 @@ on:
       - ".github/workflows/**"
       - ".gitignore"
       - "LICENSE"
+      - "THIRD_PARTY_NOTICES.md"
+      - "docs/**"
+      - "README.md"
+      - ".env.example"
       - "supabase/migrations/**"
       - "server/**"
       - "docker-compose.dev.yml"
@@ -24,6 +28,10 @@ on:
       - ".github/workflows/**"
       - ".gitignore"
       - "LICENSE"
+      - "THIRD_PARTY_NOTICES.md"
+      - "docs/**"
+      - "README.md"
+      - ".env.example"
       - "supabase/migrations/**"
       - "server/**"
       - "docker-compose.dev.yml"
@@ -52,6 +60,14 @@ jobs:
 
       - name: Server TypeScript check
         run: npx tsc -p server/tsconfig.json
+
+      - name: THIRD_PARTY_NOTICES in sync with lockfiles
+        run: |
+          npm run licenses:notices
+          git diff --exit-code THIRD_PARTY_NOTICES.md || (
+            echo "::error::THIRD_PARTY_NOTICES.md is out of date. Run: npm run licenses:notices && git add THIRD_PARTY_NOTICES.md"
+            exit 1
+          )
 
       - name: Publish readiness (no build)
         shell: pwsh
